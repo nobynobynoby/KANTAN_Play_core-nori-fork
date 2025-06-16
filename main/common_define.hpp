@@ -308,6 +308,7 @@ Button Index mapping
       menu_open,
       internal_button,        // メインボタンへのマッピング (WebSocket等で利用)
       panic_stop,
+      lock_button,             // ロックボタン(0:ロックなし、1:コードロック、2:ベースロック)
       command_max,
     };
 
@@ -332,7 +333,27 @@ Button Index mapping
       (const char*[]){ "-", "Vol %", "Oct", "Voicing", "Velo %", "Tone", "Anchor", "LoopLen", "Stroke" },   // edit_enc2_target
       (const char*[]){ "-", "Auto", "Play", "Stop" },  // autoplay_switch
       (const char*[]){ "-", "Penta", "Major", "Chroma", "Blues", "Japan", }, // note_scale_set
-    };
+      (const char*[]){ nullptr, },    // note_scale_ud
+      (const char*[]){ nullptr, },    // sound_effect
+      (const char*[]){ nullptr, },    // sub_button
+      (const char*[]){ nullptr, },    // mapping_switch
+      (const char*[]){ nullptr, },    // master_vol_ud
+      (const char*[]){ nullptr, },    // master_vol_set
+      (const char*[]){ nullptr, },    // master_key_ud
+      (const char*[]){ nullptr, },    // master_key_set
+      (const char*[]){ nullptr, },    // chord_beat
+      (const char*[]){ nullptr, },    // chord_step_reset_request
+      (const char*[]){ nullptr, },    // power_control
+      (const char*[]){ nullptr, },    // file_index_ud
+      (const char*[]){ nullptr, },    // file_index_set
+      (const char*[]){ nullptr, },    // load_from_memory
+      (const char*[]){ nullptr, },    // edit_enc2_ud
+      (const char*[]){ nullptr, },    // set_velocity
+      (const char*[]){ nullptr, },    // menu_open
+      (const char*[]){ nullptr, },    // internal_button
+      (const char*[]){ nullptr, },    // panic_stop
+      (const char*[]){ "-", "C-Lock", "B-Lock", },    // lock_button
+  };
     enum menu_function_t : uint8_t {
       mf_0, mf_1, mf_2, mf_3, mf_4, mf_5, mf_6, mf_7, mf_8, mf_9, mf_exit, mf_enter, mf_down, mf_up,
     };
@@ -761,6 +782,8 @@ Button Index mapping
       "♯"   , nullptr, "dim"  , { command::chord_semitone, 2,                               command::chord_modifier, KANTANMusic_Modifier_dim  },
       "♭"   , nullptr, "m7-5" , { command::chord_semitone, 1,                               command::chord_modifier, KANTANMusic_Modifier_m7_5 },
       "♯"   , nullptr, "m7-5" , { command::chord_semitone, 2,                               command::chord_modifier, KANTANMusic_Modifier_m7_5 },
+      "C-" , nullptr, "Lock" , { command::lock_button, 1 },
+      "B-"  , nullptr, "Lock" , { command::lock_button, 2},
       nullptr,nullptr,nullptr, {},
     };
   };
@@ -816,6 +839,14 @@ Button Index mapping
           54, 51, 60, 49, 57 }, // Drum
       };
     };
+
+    namespace lock {
+      enum lock_type_t : uint8_t {
+        none = 0,         // ロックなし
+        chord = 1,        // コードロック
+        bass = 2,         // ベースロック
+      };
+    }
   };
 
   namespace system {
@@ -1045,6 +1076,8 @@ Button Index mapping
       { "sharp[dim]"   , { "♯ [ dim ]"      , nullptr              }, { command::chord_semitone, 2,                               command::chord_modifier, KANTANMusic_Modifier_dim  } },
       { "flat[m7_5]"   , { "♭ [ m7-5 ]"    , nullptr              }, { command::chord_semitone, 1,                               command::chord_modifier, KANTANMusic_Modifier_m7_5 } },
       { "sharp[m7_5]"  , { "♯ [ m7-5 ]"     , nullptr              }, { command::chord_semitone, 2,                               command::chord_modifier, KANTANMusic_Modifier_m7_5 } },
+      { "ChordLock"    , { "ChordLock"      , nullptr              }, { command::lock_button, 1} },
+      { "BassLock"     , { "BassLock"       , nullptr              }, { command::lock_button, 2} },
       { nullptr        , nullptr                                   , {} },
     };
     static constexpr const control_assignment_t external_table[] = {
@@ -1173,6 +1206,8 @@ Button Index mapping
       { "p5_edit"      , { "Part 5 Edit"    , "パート5 編集"       }, { command::part_edit, 5 } },
       { "p6_edit"      , { "Part 6 Edit"    , "パート6 編集"       }, { command::part_edit, 6 } },
       { ""             , { "---"            , nullptr             }, {} },
+      { "ChordLock"    , { "ChordLock"      , "コード固定"         }, { command::lock_button, 1} },
+      { "BassLock"     , { "BassLock"       , "ベース固定"         }, { command::lock_button, 2} },
       { nullptr        , nullptr                                   , {} },
     };
   }
