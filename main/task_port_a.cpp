@@ -10,18 +10,20 @@
 
 #include "ex_i2c/external_m5bytebutton.hpp"
 #include "ex_i2c/external_m5extio2.hpp"
+#include "ex_i2c/external_m5pbhub.hpp"
 
 namespace kanplay_ns {
 //-------------------------------------------------------------------------
-// 最大 4台、アドレスは デフォルトを基準に 4単位で上のアドレスを使用
+// 最大 4台、アドレスは デフォルトを基準に 4単位で上のアドレスを使用(PbHubはデフォルトから1ずつ)
 static external_m5extio2_t     external_m5extio2[4]     = { { 0x45 }, { 0x49 }, { 0x4D }, { 0x51 } };  // default addr :0x45
 static external_m5bytebutton_t external_m5bytebutton[4] = { { 0x47 }, { 0x4B }, { 0x4F }, { 0x53 } };  // default addr :0x47
+static external_m5pbhub_t      external_m5pbhub[4]      = { { 0x61 }, { 0x62 }, { 0x63 }, { 0x64 } };  // default addr :0x61
 
 static interface_external_t** groups[] =
-{ (interface_external_t*[]){ &external_m5extio2[0], &external_m5bytebutton[0], nullptr },
-  (interface_external_t*[]){ &external_m5extio2[1], &external_m5bytebutton[1], nullptr },
-  (interface_external_t*[]){ &external_m5extio2[2], &external_m5bytebutton[2], nullptr },
-  (interface_external_t*[]){ &external_m5extio2[3], &external_m5bytebutton[3], nullptr }
+{ (interface_external_t*[]){ &external_m5extio2[0], &external_m5bytebutton[0], &external_m5pbhub[0], nullptr },
+  (interface_external_t*[]){ &external_m5extio2[1], &external_m5bytebutton[1], &external_m5pbhub[1], nullptr },
+  (interface_external_t*[]){ &external_m5extio2[2], &external_m5bytebutton[2], &external_m5pbhub[2], nullptr },
+  (interface_external_t*[]){ &external_m5extio2[3], &external_m5bytebutton[3], &external_m5pbhub[3], nullptr }
 };
 
 static constexpr size_t groups_number = sizeof(groups) / sizeof(groups[0]);
