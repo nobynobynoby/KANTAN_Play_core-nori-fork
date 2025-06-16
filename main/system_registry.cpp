@@ -1035,6 +1035,7 @@ size_t system_registry_t::song_data_t::saveSongJSON(uint8_t* data_buffer, size_t
     slot_info["play_mode"] = getPlayModeName(reg_slot->slot_info.getPlayMode());
     slot_info["key_offset"] = reg_slot->slot_info.getKeyOffset();
     slot_info["step_per_beat"] = reg_slot->slot_info.getStepPerBeat();
+    slot_info["note_tone"] = reg_slot->slot_info.getNoteProgram();
     auto chord_mode = slot_info["chord_mode"].to<JsonObject>();
     auto part = chord_mode["part"].to<JsonArray>();
     for (int part_index = 0; part_index < def::app::max_chord_part; ++part_index)
@@ -1177,6 +1178,7 @@ bool system_registry_t::song_data_t::loadSongJSON(const uint8_t* data, size_t da
     reg_slot->slot_info.setPlayMode(getPlayMode(slot_info["play_mode"].as<const char*>()));
     reg_slot->slot_info.setKeyOffset(slot_info["key_offset"].as<int>());
     reg_slot->slot_info.setStepPerBeat(slot_info["step_per_beat"].as<int>());
+    reg_slot->slot_info.setNoteProgram(slot_info["note_tone"].as<int>());
     auto chord_mode = slot_info["chord_mode"].as<JsonObject>();
     auto part = chord_mode["part"].as<JsonArray>();
     size_t part_size = part.size();
