@@ -52,7 +52,7 @@ class MyServerCallbacks: public BLEServerCallbacks {
 
 static void decodeReceive(const uint8_t* data, size_t length)
 {
-  if (length < 2) { return; }
+  if (length < 3) return; // タイムスタンプ2バイト＋最低1バイト必要
 
   printf("receive data length : %d  data:", length);
   for (int i = 0; i < length; i++) {
@@ -60,25 +60,47 @@ static void decodeReceive(const uint8_t* data, size_t length)
   }
   printf("\n");
 
-  // uint8_t timestamp_high = data[0];
-  int timestamp_low_index = 1;
+  int start = 1; // メッセージ開始位置。最初のバイトはヘッダータイムスタンプとしてスキップ
+  int i = start;
 
-  std::vector<uint8_t> rxtmp;
-  for (int i = 3; i <= length; ++i) {
-    if (i == length || data[i] & 0x80) {
-      if (timestamp_low_index + 1 < i) {
-        // rxtmpの末尾にdata[timestamp_low_index+1]からrxValue[i]までを追加
-        rxtmp.insert(rxtmp.end(), data + timestamp_low_index + 1, data + i);
-        timestamp_low_index = i;
-
-        if (_rx_queue.size() > 16) {
-          _rx_queue.pop_front();
+  while (i < length) {
+    if (data[i] & 0x80) {
+      // 0x80以上が来た場合
+      if ((i + 1 < length) && (data[i + 1] & 0x80)) {
+        // 次のバイトも0x80以上 → 現在の0x80はタイムスタンプ
+        if (start < i) {
+          std::vector<uint8_t> msg(data + start, data + i);
+          if (_rx_queue.size() > 16) _rx_queue.pop_front();
+          _rx_queue.push_back(msg);
         }
-        _rx_queue.push_back(rxtmp);
+        // タイムスタンプを除外して次へ
+        start = i + 1;
+        i++;
+        continue;
+      } else if ((i + 1 < length) && (data[i + 1] < 0x80)) {
+        // 次のバイトが0x80未満 → タイムスタンプはもう一つ手前
+        if (start < i - 1) {
+          std::vector<uint8_t> msg(data + start, data + i - 1);
+          if (_rx_queue.size() > 16) _rx_queue.pop_front();
+          _rx_queue.push_back(msg);
+        }
+        // タイムスタンプは除外済みなので次へ
+        start = i;
+        i++;
+        continue;
       }
     }
+    i++;
+  }
+
+  // 最後に残った部分も追加
+  if (start < length) {
+    std::vector<uint8_t> msg(data + start, data + length);
+    if (_rx_queue.size() > 16) _rx_queue.pop_front();
+    _rx_queue.push_back(msg);
   }
 }
+
 
 class MyCallbacks: public BLECharacteristicCallbacks {
   void onWrite(BLECharacteristic *pCharacteristic) {
@@ -306,7 +328,7 @@ void MIDI_Transport_BLE::setEnable(bool tx_enable, bool rx_enable)
       pClient->setClientCallbacks(new MyClientCallback());
 
 printf("try connect :%s\n", foundMidiDevices[0].getName().c_str());
-      pClient->connect(&foundMidiDevices[0]);
+      pClient->connect(&foundMidiDevices[0]);     
       auto remoteservice = pClient->getService(midi_service_uuid);
 printf("remoteservice:%p\n", remoteservice);
       auto remotecharacteristic = remoteservice->getCharacteristic(midi_characteristic_uuid);
@@ -317,6 +339,10 @@ if (remotecharacteristic->canWrite()) {  printf("canWrite\n"); }
 if (remotecharacteristic->canNotify()) {  printf("canNotify\n"); }
 if (remotecharacteristic->canIndicate()) { printf("canIndicate\n"); }
 
+      // 再接続(再接続必要デバイスのため)
+      pClient->disconnect();
+      pClient->connect(&foundMidiDevices[0]);
+      
       remotecharacteristic->registerForNotify(notifyCallback);
 
     }
