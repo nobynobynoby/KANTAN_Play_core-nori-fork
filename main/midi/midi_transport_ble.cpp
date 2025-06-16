@@ -321,30 +321,39 @@ void MIDI_Transport_BLE::setEnable(bool tx_enable, bool rx_enable)
   if (new_en) {
     ble_scan();
 
-    if (!foundMidiDevices.empty()) {
-      BLEAddress addr = foundMidiDevices[0].getAddress();
+    for (size_t i = 0; i < foundMidiDevices.size(); ++i) {
+      BLEAddress addr = foundMidiDevices[i].getAddress();
       BLEClient* pClient = BLEDevice::createClient();
 
       pClient->setClientCallbacks(new MyClientCallback());
 
-printf("try connect :%s\n", foundMidiDevices[0].getName().c_str());
-      pClient->connect(&foundMidiDevices[0]);     
+      printf("try connect :%s\n", foundMidiDevices[i].getName().c_str());
+      pClient->connect(&foundMidiDevices[i]);
       auto remoteservice = pClient->getService(midi_service_uuid);
-printf("remoteservice:%p\n", remoteservice);
+      printf("remoteservice:%p\n", remoteservice);
+      if (!remoteservice) {
+          printf("service not found, skip\n");
+          pClient->disconnect();
+          continue;
+      }
       auto remotecharacteristic = remoteservice->getCharacteristic(midi_characteristic_uuid);
-printf("remotecharacteristic:%p\n", remotecharacteristic);
+      printf("remotecharacteristic:%p\n", remotecharacteristic);
+      if (!remotecharacteristic) {
+          printf("characteristic not found, skip\n");
+          pClient->disconnect();
+          continue;
+      }
 
-if (remotecharacteristic->canRead()) {  printf("canRead\n"); }
-if (remotecharacteristic->canWrite()) {  printf("canWrite\n"); }
-if (remotecharacteristic->canNotify()) {  printf("canNotify\n"); }
-if (remotecharacteristic->canIndicate()) { printf("canIndicate\n"); }
+      if (remotecharacteristic->canRead()) {  printf("canRead\n"); }
+      if (remotecharacteristic->canWrite()) {  printf("canWrite\n"); }
+      if (remotecharacteristic->canNotify()) {  printf("canNotify\n"); }
+      if (remotecharacteristic->canIndicate()) { printf("canIndicate\n"); }
 
       // 再接続(再接続必要デバイスのため)
       pClient->disconnect();
-      pClient->connect(&foundMidiDevices[0]);
-      
-      remotecharacteristic->registerForNotify(notifyCallback);
+      pClient->connect(&foundMidiDevices[i]);
 
+      remotecharacteristic->registerForNotify(notifyCallback);
     }
   }
 }
