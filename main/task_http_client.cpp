@@ -71,8 +71,8 @@ static esp_err_t execHttpClient(const char* url, char* data, const size_t length
   return err;
 }
 
-
-static size_t ota_content_length = 0;
+// 初期値として3MBを設定
+static size_t ota_content_length = 1024*1024*3; // 3MB
 static size_t ota_received_length = 0;
 
 static esp_err_t _http_ota_event_handler(esp_http_client_event_t *evt)
@@ -99,6 +99,9 @@ static esp_err_t _http_ota_event_handler(esp_http_client_event_t *evt)
     case HTTP_EVENT_ON_DATA:
         // ESP_LOGD(TAG, "HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
         ota_received_length += evt->data_len;
+        if (ota_content_length < ota_received_length) {
+          ota_content_length = ota_received_length;
+        }
         system_registry.runtime_info.setWiFiOtaProgress(ota_content_length ? ota_received_length * 100 / ota_content_length : 0);
         break;
     case HTTP_EVENT_ON_FINISH:
@@ -137,6 +140,7 @@ static esp_err_t exec_http_ota(const char* binary_url)
 
   esp_https_ota_config_t ota_config;
   memset(&ota_config, 0, sizeof(esp_https_ota_config_t));
+  ota_received_length = 0;
 
   ota_config.http_config = &config;
 
@@ -174,7 +178,7 @@ static def::command::wifi_ota_state_t exec_get_binary_url(const char* json_url, 
           auto url_list = firmware_array[i]["url"].as<JsonObject>();
 
           M5_LOGD("type: %s", type);
-          M5_LOGD("ver: %s", type);
+          M5_LOGD("ver: %s", ver);
 
           // ターゲットタイプが同じか確認
           bool target_check = (0 == strcmp(target_type, type));

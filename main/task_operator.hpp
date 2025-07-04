@@ -33,7 +33,7 @@ private:
 
   void changeSubbuttonMapping(const uint32_t *map);
 
-  // void updateSubButton(void);
+  void afterMenuClose(void);
 
   uint8_t _modifier_press_order[8];
   uint8_t _base_degree_press_order[8];

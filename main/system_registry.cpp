@@ -22,8 +22,8 @@ static rtc_cpu_freq_config_t conf_160mhz;
 static std::mutex mutex_debug;
 
 #if CORE_DEBUG_LEVEL > 3
-#define DEBUG_PERFOMANCE_CHECK
-#define DEBUG_GPIO_MONITORING
+// #define DEBUG_PERFOMANCE_CHECK
+// #define DEBUG_GPIO_MONITORING
 #endif
 
 
@@ -104,6 +104,8 @@ void system_registry_t::init(void)
   command_mapping_external.init();
   command_mapping_port_b.init();
   command_mapping_midinote.init();
+  command_mapping_midicc15.init();
+  command_mapping_midicc16.init();
   drum_mapping.init();
   file_command.init();
 
@@ -183,6 +185,11 @@ void system_registry_t::reset(void)
   // パターン編集時ベロシティ設定
   runtime_info.setEditVelocity(100);
 
+  runtime_info.setMIDIChannelVolumeMax(127);
+
+  // InstaChord連携デバイス設定
+  midi_port_setting.setInstaChordLinkDev(def::command::instachord_link_dev_t::icld_kanplay);
+
   // マスターボリューム設定
   operator_command.addQueue( { def::command::master_vol_set, 75 } );
 
@@ -210,33 +217,94 @@ void system_registry_t::reset(void)
     command_mapping_port_b.setCommandParamArray(i, def::command::command_mapping_port_b_table[i]);
   }
 
-  command_mapping_midinote.reset();
   struct note_cp_t {
     uint8_t note;
     def::command::command_param_array_t command_param;
   };
-  static constexpr const note_cp_t note_cp_table[] = {
-    { 53, { def::command::chord_modifier  , KANTANMusic_Modifier_dim } },
-    { 55, { def::command::chord_modifier  , KANTANMusic_Modifier_7 } },
-    { 56, { def::command::chord_modifier  , KANTANMusic_Modifier_sus4 } },
-    { 57, { def::command::chord_minor_swap, 1 } },
-    { 58, { def::command::chord_modifier  , KANTANMusic_Modifier_Add9 } },
-    { 59, { def::command::chord_modifier  , KANTANMusic_Modifier_M7 } },
-    { 60, {                                  def::command::chord_degree, 1 } },
-    { 61, { def::command::chord_semitone, 1, def::command::chord_degree, 2 } },
-    { 62, {                                  def::command::chord_degree, 2 } },
-    { 63, { def::command::chord_semitone, 1, def::command::chord_degree, 3 } },
-    { 64, {                                  def::command::chord_degree, 3 } },
-    { 65, {                                  def::command::chord_degree, 4 } },
-    { 66, { def::command::chord_semitone, 1, def::command::chord_degree, 5 } },
-    { 67, {                                  def::command::chord_degree, 5 } },
-    { 68, { def::command::chord_semitone, 1, def::command::chord_degree, 6 } },
-    { 69, {                                  def::command::chord_degree, 6 } },
-    { 70, { def::command::chord_semitone, 1, def::command::chord_degree, 7 } },
-    { 71, {                                  def::command::chord_degree, 7 } },
-  };
-  for (const auto& cp : note_cp_table) {
-    command_mapping_midinote.setCommandParamArray(cp.note, cp.command_param);
+  {
+    command_mapping_midinote.reset();
+    static constexpr const note_cp_t note_cp_table[] = {
+      { 53, { def::command::chord_modifier  , KANTANMusic_Modifier_dim } },
+      { 55, { def::command::chord_modifier  , KANTANMusic_Modifier_7 } },
+      { 56, { def::command::chord_modifier  , KANTANMusic_Modifier_sus4 } },
+      { 57, { def::command::chord_minor_swap, 1 } },
+      { 58, { def::command::chord_modifier  , KANTANMusic_Modifier_Add9 } },
+      { 59, { def::command::chord_modifier  , KANTANMusic_Modifier_M7 } },
+      { 60, {                                  def::command::chord_degree, 1 } },
+      { 61, { def::command::chord_semitone, 1, def::command::chord_degree, 2 } },
+      { 62, {                                  def::command::chord_degree, 2 } },
+      { 63, { def::command::chord_semitone, 1, def::command::chord_degree, 3 } },
+      { 64, {                                  def::command::chord_degree, 3 } },
+      { 65, {                                  def::command::chord_degree, 4 } },
+      { 66, { def::command::chord_semitone, 1, def::command::chord_degree, 5 } },
+      { 67, {                                  def::command::chord_degree, 5 } },
+      { 68, { def::command::chord_semitone, 1, def::command::chord_degree, 6 } },
+      { 69, {                                  def::command::chord_degree, 6 } },
+      { 70, { def::command::chord_semitone, 1, def::command::chord_degree, 7 } },
+      { 71, {                                  def::command::chord_degree, 7 } },
+    };
+    for (const auto& cp : note_cp_table) {
+      command_mapping_midinote.setCommandParamArray(cp.note, cp.command_param);
+    }
+  }
+
+  { // InstaChord連携用のコントロールチェンジへの機能マッピング
+    command_mapping_midicc15.reset();
+    static constexpr const note_cp_t cc15_cp_table[] = {
+      {  0, { def::command::target_key_set  ,  0 } },
+      {  1, { def::command::target_key_set  ,  1 } },
+      {  2, { def::command::target_key_set  ,  2 } },
+      {  3, { def::command::target_key_set  ,  3 } },
+      {  4, { def::command::target_key_set  ,  4 } },
+      {  5, { def::command::target_key_set  ,  5 } },
+      {  6, { def::command::target_key_set  ,  6 } },
+      {  7, { def::command::target_key_set  ,  7 } },
+      {  8, { def::command::target_key_set  ,  8 } },
+      {  9, { def::command::target_key_set  ,  9 } },
+      { 10, { def::command::target_key_set  , 10 } },
+      { 11, { def::command::target_key_set  , 11 } },
+    };
+    for (const auto& cp : cc15_cp_table) {
+      command_mapping_midicc15.setCommandParamArray(cp.note, cp.command_param);
+    }
+
+    command_mapping_midicc16.reset();
+    static constexpr const note_cp_t cc16_cp_table[] = {
+      {  2, { def::command::slot_select_ud  ,  1 } },
+      {  3, { def::command::slot_select_ud  , -1 } },
+      {  7, { def::command::internal_button , 21 } },
+      {  8, { def::command::internal_button , 27 } },
+      {  9, { def::command::chord_semitone  ,  1 } },
+      { 10, { def::command::chord_minor_swap,  1 } },
+      { 11, { def::command::chord_modifier  , KANTANMusic_Modifier_m7_5 } },
+      { 12, { def::command::chord_modifier  , KANTANMusic_Modifier_7    } },
+      { 13, { def::command::chord_modifier  , KANTANMusic_Modifier_M7   } },
+      { 14, { def::command::chord_modifier  , KANTANMusic_Modifier_sus4 } },
+      { 15, { def::command::chord_modifier  , KANTANMusic_Modifier_dim  } },
+      { 16, { def::command::chord_modifier  , KANTANMusic_Modifier_Add9 } },
+      { 17, { def::command::chord_modifier  , KANTANMusic_Modifier_aug  } },
+      { 18, { def::command::chord_degree    ,  1 } },
+      { 19, { def::command::chord_degree    ,  2 } },
+      { 20, { def::command::chord_degree    ,  3 } },
+      { 21, { def::command::chord_degree    ,  4 } },
+      { 22, { def::command::chord_degree    ,  5 } },
+      { 23, { def::command::chord_degree    ,  6 } },
+      { 24, { def::command::chord_degree    ,  7 } },
+      { 25, { def::command::chord_semitone  ,  1 , def::command::chord_degree, 3 } },
+      { 26, { def::command::chord_semitone  ,  1 , def::command::chord_degree, 7 } },
+      { 27, { def::command::chord_degree    ,  6 } },
+      { 28, { def::command::chord_degree    ,  7 } },
+      { 29, { def::command::chord_degree    ,  1 } },
+      { 30, { def::command::chord_degree    ,  2 } },
+      { 31, { def::command::chord_minor_swap,  1 , def::command::chord_degree, 3 } },
+      { 32, { def::command::chord_degree    ,  4 } },
+      { 33, { def::command::chord_degree    ,  5 } },
+      { 34, { def::command::chord_semitone  ,  1 , def::command::chord_degree, 3 } },
+      { 35, { def::command::chord_semitone  ,  1 , def::command::chord_degree, 7 } },
+    };
+    for (const auto& cp : cc16_cp_table) {
+      command_mapping_midicc16.setCommandParamArray(cp.note, cp.command_param);
+    }
   }
 
   // コード演奏時のメインボタンのカスタマイズ用マッピングを準備
@@ -256,7 +324,7 @@ void system_registry_t::reset(void)
   color_setting.setDisablePartColor(     0x0B255E);
   color_setting.setArpeggioNoteForeColor(0xDDEEFF);
   color_setting.setArpeggioNoteBackColor(0x103E8D);
-  color_setting.setArpeggioStepColor(    0x60AEBD);
+  color_setting.setArpeggioStepColor(    0x3876A5);
 
   color_setting.setButtonDegreeColor(    0x8888CC); // コード選択ボタンの色
   color_setting.setButtonModifierColor(  0x555555); // Modifierボタンの色
@@ -448,6 +516,11 @@ size_t system_registry_t::saveSettingJSON(uint8_t* data, size_t data_length)
     json["chattering_threshold"] = user_setting.getChatteringThreshold();
     json["timezone"]             = user_setting.getTimeZone();
   }
+  {
+    auto json = json_root["midi_port_setting"].to<JsonObject>();
+    json["instachord_link_dev"] = (uint8_t)midi_port_setting.getInstaChordLinkDev();
+  }
+
   auto json_key_mapping = json_root["key_mapping"].to<JsonObject>();
   {
     {
@@ -482,7 +555,7 @@ size_t system_registry_t::saveSettingJSON(uint8_t* data, size_t data_length)
   }
 
   auto result = serializeJson(json_root, (char*)data, data_length);
-printf("saveSettingJSON result: %d\n", result);
+// ESP_LOGV("sysreg", "saveSettingJSON result: %d\n", result);
 
   return result;
 }
@@ -530,6 +603,10 @@ bool system_registry_t::loadSettingJSON(const uint8_t* data, size_t data_length)
     user_setting.setImuVelocityLevel(                        json["imu_velocity_level"  ].as<uint8_t>());
     user_setting.setChatteringThreshold(                     json["chattering_threshold"].as<uint8_t>());
     user_setting.setTimeZone(                                json["timezone"            ].as<int8_t>());
+  }
+  {
+    auto json = json_root["midi_port_setting"].as<JsonObject>();
+    midi_port_setting.setInstaChordLinkDev((def::command::instachord_link_dev_t)json["instachord_link_dev"      ].as<uint8_t>());
   }
 
   // control_assignment::play button ( 旧名 key mapping )
