@@ -277,9 +277,39 @@ uint32_t task_kantanplay_t::chordProc(void)
 // Degree(度数)ボタン操作時の処理
 void task_kantanplay_t::procChordDegree(const def::command::command_param_t& command_param, const bool is_pressed)
 {
-  const uint8_t degree = command_param.getParam();
+  uint8_t degree = command_param.getParam();
+  uint8_t bassDegree = system_registry.chord_play.getChordBassDegree();
+
+  // ロック状態とロック時コードを取得
+  const uint8_t lock_status = system_registry.chord_play.getLockButtonState();
+  const uint8_t lock_degree = system_registry.chord_play.getLockedChordDegree();
 
   int current_degree = system_registry.chord_play.getChordDegree();
+
+  // コードロック状態でコードが決定している場合はコードのすり替え※ロックボタンは先押し
+  if (lock_status == def::play::lock::lock_type_t::chord){
+    if(lock_degree != 0) {
+      // コードロック状態でコードが決定している場合は、ベースコードはボタンのコードに変更
+      bassDegree = degree;
+      // コードロック状態でコードが決定している場合は、ロックされたコードに変更する
+      degree = lock_degree;
+    } else {
+      // ロック状態でコードが決定していない場合は、現在のコードをそのまま使用し、ロックコードを決定する
+      system_registry.chord_play.setLockedChordDegree(degree);
+    }
+  }else if (lock_status == def::play::lock::lock_type_t::bass) {
+    if(lock_degree != 0) {
+      // ロック状態でコードが決定している場合は、ロックされたコードに変更する
+      bassDegree = lock_degree;
+    } else {
+      // ロック状態でコードが決定していない場合は、現在のコードをそのまま使用し、ロックコードを決定する
+      system_registry.chord_play.setLockedChordDegree(degree);
+    }
+ }else{
+    // ロック状態でない場合は、ロックコードをクリア
+    system_registry.chord_play.setLockedChordDegree(0);
+  } 
+
   // 現在のDegreeと異なる場合
   if (current_degree != degree) {
     // 別のDegreeのボタンを離した場合は何もしない
@@ -291,7 +321,7 @@ void task_kantanplay_t::procChordDegree(const def::command::command_param_t& com
 
   if (is_pressed) { // Degreeボタンを押したタイミングで次のオモテ拍での演奏オプションをセットしておく
     _next_option.degree = degree;
-    _next_option.bass_degree = system_registry.chord_play.getChordBassDegree();
+    _next_option.bass_degree = bassDegree;
     // _next_option.semitone_shift = system_registry.chord_play.getChordSemitone();
     // _next_option.bass_semitone_shift = system_registry.chord_play.getChordBassSemitone();
     // _next_option.minor_swap = system_registry.chord_play.getChordMinorSwap();
@@ -500,9 +530,12 @@ void task_kantanplay_t::chordStepAdvance(void)
     bool normal_reset = false;
 
     // _current_option と _next_option が違う場合は先頭に戻す (アンカーステップは効く)
-    if (_current_option != _next_option) {
+     if (_current_option != _next_option) {
       _current_option = _next_option;
-      normal_reset = true;
+      // ロックボタンが押されていない場合のみ先頭に戻す
+      if(system_registry.chord_play.getLockButtonState() == def::play::lock::lock_type_t::none) {
+        normal_reset = true;
+      }
     }
     auto semitone_shift = system_registry.chord_play.getChordSemitone();
     auto bass_semitone_shift = system_registry.chord_play.getChordBassSemitone();

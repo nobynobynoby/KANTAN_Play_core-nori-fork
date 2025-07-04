@@ -699,7 +699,7 @@ protected:
     };
 
     struct reg_chord_play_t : public registry_t {
-        reg_chord_play_t(void) : registry_t(32, 0, DATA_SIZE_8) {}
+        reg_chord_play_t(void) : registry_t(35, 0, DATA_SIZE_8) {}
         enum index_t : uint16_t {
             CHORD_DEGREE,
             CHORD_MODIFIER,
@@ -732,6 +732,9 @@ protected:
             RANGE_W,     // 編集時範囲選択幅
             CONFIRM_ALLCLEAR, // 全消去確認
             CONFIRM_PASTE,    // 貼り付け確認
+            LOCK_BUTTON_STATE,      // ★追加：ロックボタン状態(0:未ロック, 1:コードロック, 2:ベースロック
+            LOCKED_CHORD_DEGREE,    // ★追加：ロック時のコード
+            LOCKED_SEMITONE,        // ★追加：ロック時のセミトーン
         };
         void setChordDegree(uint8_t degree) { set8(CHORD_DEGREE, degree); }
         uint8_t getChordDegree(void) const { return get8(CHORD_DEGREE); }
@@ -781,6 +784,17 @@ protected:
 
         void setConfirm_Paste(bool confirm) { set8(CONFIRM_PASTE, confirm); }
         uint8_t getConfirm_Paste(void) const { return get8(CONFIRM_PASTE); }
+        // ★追加：ロックボタン状態(0:未ロック, 1:コードロック, 2:ベースロック)
+        void setLockButtonState(uint8_t state) { set8(LOCK_BUTTON_STATE, state); }
+        uint8_t getLockButtonState(void) const { return get8(LOCK_BUTTON_STATE); }
+
+        // ★追加：ロック時のコード（度数）
+        void setLockedChordDegree(uint8_t degree) { set8(LOCKED_CHORD_DEGREE, degree); }
+        uint8_t getLockedChordDegree(void) const { return get8(LOCKED_CHORD_DEGREE); }
+
+        // ★追加：ロック時のセミトーン
+        void setLockedSemitone(int semitone) { set8(LOCKED_SEMITONE, semitone); }
+        int getLockedSemitone(void) const { return (int8_t)get8(LOCKED_SEMITONE); }
     };
 
     struct reg_command_request_t : public registry_t {

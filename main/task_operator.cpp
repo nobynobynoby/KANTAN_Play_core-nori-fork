@@ -28,6 +28,7 @@ static uint32_t getColorByCommand(const def::command::command_param_t &command_p
     color = system_registry.color_setting.getButtonDegreeColor();
     break;
   case def::command::chord_modifier:
+  case def::command::lock_button:
     color = system_registry.color_setting.getButtonModifierColor();
     break;
   case def::command::chord_minor_swap:
@@ -784,6 +785,30 @@ void task_operator_t::commandProccessor(const def::command::command_param_t& com
       }
     }
     break;
+
+  case def::command::lock_button:
+     // オンコードのコマンドで呼び出しなおす用
+    def::command::command_param_t command_param(def::command::chord_bass_degree,system_registry.chord_play.getChordDegree());
+
+    if (is_pressed) {
+      // ロックボタン操作
+      system_registry.chord_play.setLockButtonState(param);
+    }else {
+      // ロックボタン解除操作
+      //if(param == def::play::lock::lock_type_t::bass){
+      //  // ベースロックの場合は実際に発声しているベース音にパラメータをすり替える(すり替えないとオンベースが止まらないので)
+      //  command_param.setParam(system_registry.chord_play.getLockedChordDegree());
+      //}
+      // ロックボタンを離した時にベースコードの押し順をリセットする(暫定)
+      memset(_base_degree_press_order, 0, sizeof(_base_degree_press_order));
+      system_registry.chord_play.setLockButtonState(def::play::lock::lock_type_t::none);
+      system_registry.chord_play.setLockedChordDegree(0);
+      system_registry.chord_play.setLockedSemitone(0);      
+    }
+    // オンコードのコマンドで呼び出しなおし
+    commandProccessor(command_param, is_pressed);
+    break;
+
   }
 }
 
