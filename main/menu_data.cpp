@@ -202,7 +202,8 @@ struct mi_normal_t : public menu_item_t {
   bool execute(void) const override
   {
     if (!setValue(_selecting_value)) { return false; }
-    exit();
+    // 値を確定したときに親階層に戻る場合はここでexit
+    // exit();
     return true;
   }
 
@@ -1277,6 +1278,70 @@ struct mi_ble_midi_t : public mi_midi_selector_t {
   }
 };
 
+struct mi_usb_midi_t : public mi_midi_selector_t {
+  constexpr mi_usb_midi_t( def::menu_category_t cate, uint8_t seq, uint8_t level, const localize_text_t& title )
+  : mi_midi_selector_t { cate, seq, level, title } {}
+  int getValue(void) const override
+  {
+    return getMinValue() + system_registry.midi_port_setting.getUSBMIDI();
+  }
+  bool setValue(int value) const override
+  {
+    if (mi_selector_t::setValue(value) == false) { return false; }
+    value -= getMinValue();
+    system_registry.midi_port_setting.setUSBMIDI( static_cast<def::command::ex_midi_mode_t>(value));
+    return true;
+  }
+};
+
+struct mi_iclink_port_t : public mi_selector_t {
+protected:
+  static constexpr const localize_text_array_t name_array = { 3, (const localize_text_t[]){
+    { "Off",   "オフ" },
+    { "BLE", nullptr },
+    { "USB", nullptr },
+  }};
+
+public:
+  constexpr mi_iclink_port_t( def::menu_category_t cate, uint8_t seq, uint8_t level, const localize_text_t& title )
+  : mi_selector_t { cate, seq, level, title, &name_array } {}
+  int getValue(void) const override
+  {
+    return getMinValue() + system_registry.midi_port_setting.getInstaChordLinkPort();
+  }
+  bool setValue(int value) const override
+  {
+    if (mi_selector_t::setValue(value) == false) { return false; }
+    value -= getMinValue();
+    system_registry.midi_port_setting.setInstaChordLinkPort( static_cast<def::command::instachord_link_port_t>(value));
+    return true;
+  }
+};
+
+struct mi_iclink_dev_t : public mi_selector_t {
+protected:
+  static constexpr const localize_text_array_t name_array = { 2, (const localize_text_t[]){
+    { "KANTAN Play", "かんぷれ" },
+    { "InstaChord",  "インスタコード"},
+  }};
+
+public:
+  constexpr mi_iclink_dev_t( def::menu_category_t cate, uint8_t seq, uint8_t level, const localize_text_t& title )
+  : mi_selector_t { cate, seq, level, title, &name_array } {}
+  int getValue(void) const override
+  {
+    return getMinValue() + system_registry.midi_port_setting.getInstaChordLinkDev();
+  }
+  bool setValue(int value) const override
+  {
+    if (mi_selector_t::setValue(value) == false) { return false; }
+    value -= getMinValue();
+    system_registry.midi_port_setting.setInstaChordLinkDev( static_cast<def::command::instachord_link_dev_t>(value));
+    return true;
+  }
+};
+
+
 struct mi_otaupdate_t : public mi_normal_t {
   constexpr mi_otaupdate_t( def::menu_category_t cate, uint8_t seq, uint8_t level, const localize_text_t& title )
   : mi_normal_t { cate, seq, level, title } {}
@@ -1405,6 +1470,8 @@ struct mi_manual_qr_t : public mi_normal_t {
   }
 };
 
+
+static std::string _tmp_filename;
 struct mi_filelist_t : public mi_normal_t {
   constexpr mi_filelist_t( def::menu_category_t cate, uint8_t seq, uint8_t level, const localize_text_t& title, def::app::data_type_t dir_type )
   : mi_normal_t { cate, seq, level, title }
@@ -1415,7 +1482,16 @@ protected:
 
   const char* getSelectorText(size_t index) const override {
     auto fileinfo = file_manage.getFileInfo(_dir_type, index);
-    return fileinfo->filename.c_str();
+    _tmp_filename = fileinfo->filename;
+
+    // 末尾の拡張子 .json を削除
+    auto pos = _tmp_filename.rfind(".json");
+    if (pos != std::string::npos) {
+      _tmp_filename = _tmp_filename.substr(0, pos);
+    }
+
+    return _tmp_filename.c_str();
+    // return fileinfo->filename.c_str();
   }
 
   size_t getSelectorCount(void) const override { return file_manage.getDirManage(_dir_type)->getCount(); }
@@ -1436,10 +1512,15 @@ protected:
 };
 
 struct mi_load_file_t : public mi_filelist_t {
-  constexpr mi_load_file_t( def::menu_category_t cate, uint8_t seq, uint8_t level, const localize_text_t& title, def::app::data_type_t dir_type )
+  constexpr mi_load_file_t( def::menu_category_t cate, uint8_t seq, uint8_t level, const localize_text_t& title, def::app::data_type_t dir_type, size_t top_index = 1 )
   : mi_filelist_t { cate, seq, level, title, dir_type }
-  {}
+  , _top_index { top_index }
+  {
+  }
 protected:
+  const size_t _top_index;
+  int getMinValue(void) const { return _top_index; }
+
   bool enter(void) const override
   {
     system_registry.backup_song_data.assign(system_registry.song_data);
@@ -1447,13 +1528,13 @@ protected:
     M5.delay(64);
     return mi_filelist_t::enter();
   }
-
+/*
   bool exit(void) const override
   {
     system_registry.song_data.assign(system_registry.backup_song_data);
     return mi_filelist_t::exit();
   }
-
+//*/
   bool execute(void) const override
   {
     auto songinfo = system_registry.file_command.getCurrentSongInfo();
@@ -1559,7 +1640,7 @@ static constexpr menu_item_ptr menu_system[] = {
   (const mi_tree_t          []){{ def::menu_category_t::menu_system,  0,0    , { "Menu"           , "メニュー"    }}},
   (const mi_tree_t          []){{ def::menu_category_t::menu_system,  1, 1   , { "File"           , "ファイル"    }}},
   (const mi_tree_t          []){{ def::menu_category_t::menu_system,  2,  2  , { "Open"           , "開く"        }}},
-  (const mi_load_file_t     []){{ def::menu_category_t::menu_system,  3,   3 , { "Preset Songs"   , "プリセットソング" }, def::app::data_type_t::data_song_preset }},
+  (const mi_load_file_t     []){{ def::menu_category_t::menu_system,  3,   3 , { "Preset Songs"   , "プリセットソング" }, def::app::data_type_t::data_song_preset, 0 }},
   (const mi_load_file_t     []){{ def::menu_category_t::menu_system,  4,   3 , { "Extra Songs (SD)","エクストラソング(SD)" }, def::app::data_type_t::data_song_extra }},
   (const mi_load_file_t     []){{ def::menu_category_t::menu_system,  5,   3 , { "User Songs (SD)", "ユーザソング(SD)"}, def::app::data_type_t::data_song_users }},
   (const mi_save_t          []){{ def::menu_category_t::menu_system,  6,  2  , { "Save"           , "保存"          }, def::app::data_type_t::data_song_users }},
@@ -1758,40 +1839,23 @@ static constexpr menu_item_ptr menu_system[] = {
   (const mi_ca_midinote_t   []){{ def::menu_category_t::menu_system,199,    4 , { "  G  9" , nullptr }, 127 }},
   (const mi_tree_t          []){{ def::menu_category_t::menu_system,200,  2   , { "External Device", "外部デバイス" }}},
   (const mi_portc_midi_t    []){{ def::menu_category_t::menu_system,201,   3  , { "PortC MIDI"     , "ポートC MIDI" }}},
-  (const mi_ble_midi_t      []){{ def::menu_category_t::menu_system,202,   3  , { "BLE MIDI"       , "BLE MIDI"     }}},
-
-//(const mi_tree_t          []){{ def::menu_category_t::menu_system,203,  2   , { "MIDI Input Setting", "MIDI入力設定" }}},
-//(const mi_midi_input_t    []){{ def::menu_category_t::menu_system,204,   3  , { "CH  1"         , nullptr       },  1 }},
-//(const mi_midi_input_t    []){{ def::menu_category_t::menu_system,205,   3  , { "CH  2"         , nullptr       },  2 }},
-//(const mi_midi_input_t    []){{ def::menu_category_t::menu_system,206,   3  , { "CH  3"         , nullptr       },  3 }},
-//(const mi_midi_input_t    []){{ def::menu_category_t::menu_system,207,   3  , { "CH  4"         , nullptr       },  4 }},
-//(const mi_midi_input_t    []){{ def::menu_category_t::menu_system,208,   3  , { "CH  5"         , nullptr       },  5 }},
-//(const mi_midi_input_t    []){{ def::menu_category_t::menu_system,209,   3  , { "CH  6"         , nullptr       },  6 }},
-//(const mi_midi_input_t    []){{ def::menu_category_t::menu_system,210,   3  , { "CH  7"         , nullptr       },  7 }},
-//(const mi_midi_input_t    []){{ def::menu_category_t::menu_system,211,   3  , { "CH  8"         , nullptr       },  8 }},
-//(const mi_midi_input_t    []){{ def::menu_category_t::menu_system,212,   3  , { "CH  9"         , nullptr       },  9 }},
-//(const mi_midi_input_t    []){{ def::menu_category_t::menu_system,213,   3  , { "CH 10"         , nullptr       }, 10 }},
-//(const mi_midi_input_t    []){{ def::menu_category_t::menu_system,214,   3  , { "CH 11"         , nullptr       }, 11 }},
-//(const mi_midi_input_t    []){{ def::menu_category_t::menu_system,215,   3  , { "CH 12"         , nullptr       }, 12 }},
-//(const mi_midi_input_t    []){{ def::menu_category_t::menu_system,216,   3  , { "CH 13"         , nullptr       }, 13 }},
-//(const mi_midi_input_t    []){{ def::menu_category_t::menu_system,217,   3  , { "CH 14"         , nullptr       }, 14 }},
-//(const mi_midi_input_t    []){{ def::menu_category_t::menu_system,218,   3  , { "CH 15"         , nullptr       }, 15 }},
-//(const mi_midi_input_t    []){{ def::menu_category_t::menu_system,218,   3  , { "CH 16"         , nullptr       }, 16 }},
-
-// TODO:これ追加  OFF,80,81-89,90 (初期値80)
-//(const mi_ble_midi_t      []){{ def::menu_category_t::menu_system,203,   3 , { "#CC Assignment" , "#CC割当"     }}},
-  (const mi_imu_velocity_t  []){{ def::menu_category_t::menu_system,203,  2  , { "IMU Velocity"   , "IMUベロシティ"}}},
-  (const mi_tree_t          []){{ def::menu_category_t::menu_system,204,  2  , { "Display"        , "表示"        }}},
-  (const mi_lcd_backlight_t []){{ def::menu_category_t::menu_system,205,   3 , { "Backlight"      , "画面の輝度"  }}},
-  (const mi_led_brightness_t[]){{ def::menu_category_t::menu_system,206,   3 , { "LED Brightness" , "LEDの輝度"   }}},
-  (const mi_detail_view_t   []){{ def::menu_category_t::menu_system,207,   3 , { "Detail View"    , "詳細表示"    }}},
-  (const mi_wave_view_t     []){{ def::menu_category_t::menu_system,208,   3 , { "Wave View"      , "波形表示"    }}},
-  (const mi_language_t      []){{ def::menu_category_t::menu_system,209,  2  , { "Language"       , "言語"        }}},
-  (const mi_tree_t          []){{ def::menu_category_t::menu_system,210,  2  , { "Volume"         , "音量"        }}},
-  (const mi_vol_midi_t      []){{ def::menu_category_t::menu_system,211,   3 , { "MIDI Mastervol" , "MIDIマスター音量"}}},
-  (const mi_vol_adcmic_t    []){{ def::menu_category_t::menu_system,212,   3 , { "ADC MicAmp"     , "ADCマイクアンプ" }}},
-  (const mi_all_reset_t     []){{ def::menu_category_t::menu_system,213,  2  , { "Reset All Settings", "全設定リセット"    }}},
-  (const mi_manual_qr_t     []){{ def::menu_category_t::menu_system,214, 1   , { "Manual QR"      , "説明書QR"     }}},
+  (const mi_ble_midi_t      []){{ def::menu_category_t::menu_system,202,   3  , { "BLE MIDI"       , nullptr     }}},
+  (const mi_usb_midi_t      []){{ def::menu_category_t::menu_system,203,   3  , { "USB MIDI"       , nullptr     }}},
+  (const mi_tree_t          []){{ def::menu_category_t::menu_system,204,   3  , { "InstaChord Link", "インスタコードリンク"}}},
+  (const mi_iclink_port_t   []){{ def::menu_category_t::menu_system,205,    4 , { "Connect"        , "接続方法"   }}},
+  (const mi_iclink_dev_t    []){{ def::menu_category_t::menu_system,206,    4 , { "Play Device"    , "演奏デバイス"}}},
+  (const mi_imu_velocity_t  []){{ def::menu_category_t::menu_system,207,  2   , { "IMU Velocity"   , "IMUベロシティ"}}},
+  (const mi_tree_t          []){{ def::menu_category_t::menu_system,208,  2   , { "Display"        , "表示"        }}},
+  (const mi_lcd_backlight_t []){{ def::menu_category_t::menu_system,209,   3  , { "Backlight"      , "画面の輝度"  }}},
+  (const mi_led_brightness_t[]){{ def::menu_category_t::menu_system,210,   3  , { "LED Brightness" , "LEDの輝度"   }}},
+  (const mi_detail_view_t   []){{ def::menu_category_t::menu_system,211,   3  , { "Detail View"    , "詳細表示"    }}},
+  (const mi_wave_view_t     []){{ def::menu_category_t::menu_system,212,   3  , { "Wave View"      , "波形表示"    }}},
+  (const mi_language_t      []){{ def::menu_category_t::menu_system,213,  2   , { "Language"       , "言語"        }}},
+  (const mi_tree_t          []){{ def::menu_category_t::menu_system,214,  2   , { "Volume"         , "音量"        }}},
+  (const mi_vol_midi_t      []){{ def::menu_category_t::menu_system,215,   3  , { "MIDI Mastervol" , "MIDIマスター音量"}}},
+  (const mi_vol_adcmic_t    []){{ def::menu_category_t::menu_system,216,   3  , { "ADC MicAmp"     , "ADCマイクアンプ" }}},
+  (const mi_all_reset_t     []){{ def::menu_category_t::menu_system,217,  2   , { "Reset All Settings", "全設定リセット"    }}},
+  (const mi_manual_qr_t     []){{ def::menu_category_t::menu_system,218, 1    , { "Manual QR"      , "説明書QR"     }}},
   nullptr, // end of menu
 };
 // const size_t menu_system_size = sizeof(menu_system) / sizeof(menu_system[0]) - 1;

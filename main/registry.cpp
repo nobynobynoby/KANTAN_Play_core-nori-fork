@@ -46,12 +46,15 @@ void registry_base_t::init(bool psram)
 {
   if (_history_count) {
     size_t history_size = _history_count * sizeof(history_t);
+    void* ptr = nullptr;
     if (psram) {
-      _history = (history_t*)m5gfx::heap_alloc_psram(history_size);
-    } else {
-      _history = (history_t*)m5gfx::heap_alloc(history_size);
+      ptr = m5gfx::heap_alloc_psram(history_size);
     }
-    memset(_history, 0xFF, history_size);
+    if (ptr == nullptr) {
+      ptr = m5gfx::heap_alloc(history_size);
+    }
+    memset(ptr, 0xFF, history_size);
+    _history = (history_t*)ptr;
   }
 }
 

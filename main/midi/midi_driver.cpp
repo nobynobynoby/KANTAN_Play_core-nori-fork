@@ -46,21 +46,26 @@ static int getDataByteLength(uint8_t status) {
 
 void MIDIDriver::sendMessage(uint8_t status_byte, uint8_t data1, uint8_t data2)
 {
-  if (_send_data.size() >= _send_buffer_size - 3) {
-    sendFlush();
-  }
-  if (_send_runningStatus != status_byte) {
-    _send_runningStatus = status_byte;
-    sendFlush();
-    _send_data.push_back(status_byte);
-  }
+  uint8_t data[3] = { status_byte, data1, data2 };
   size_t dataByteLength = getDataByteLength(status_byte);
-  if (dataByteLength > 0) {
-    _send_data.push_back(data1);
-    if (dataByteLength > 1) {
-      _send_data.push_back(data2);
-    }
+  _transport->addMessage(data, dataByteLength + 1);
+/*
+if (_send_data.size() >= _send_buffer_size - 3) {
+  sendFlush();
+}
+if (_send_runningStatus != status_byte) {
+  _send_runningStatus = status_byte;
+  sendFlush();
+  _send_data.push_back(status_byte);
+}
+size_t dataByteLength = getDataByteLength(status_byte);
+if (dataByteLength > 0) {
+  _send_data.push_back(data1);
+  if (dataByteLength > 1) {
+    _send_data.push_back(data2);
   }
+}
+*/
 }
 /*
 void MIDI_Encoder::pushMessage(const MIDI_Message& message)
@@ -101,25 +106,39 @@ bool MIDI_Decoder::popMessage(MIDI_Message* message)
   } else {
     if (_runningStatus < 0x80) {
       while (index < _data.size() && (_data[index] & 0x80) == 0) { ++index; }
-// printf("popMessage : invalid data erase : index:%d\n", index);
+printf("popMessage : invalid data erase : index:%d\n", index);
       _data.erase(_data.begin(), _data.begin() + index);
-      return false;
+      // return false;
+      _runningStatus = message->status;
     }
     message->status = _runningStatus;
   }
   size_t dataByteLength = getDataByteLength(message->status);
-  if (dataByteLength == -1) { return false; }
+  if (dataByteLength == -1) {
+printf("popMessage : invalid data status:%02x\n", message->status);
+    _data.erase(_data.begin(), _data.begin() + index);
+    return false;
+  }
 
   if (dataByteLength == 0 && message->status == 0xF0)
   { // System Exclusive
     size_t index_end = index;
     while (index_end < _data.size() && _data[index_end] != 0xF7) { ++index_end; }
-    if (index_end == _data.size()) { return false; }
+// printf("sys ex:len:%d  , end:%02x\n", _data.size(), _data[index_end]);
+    if (index_end == _data.size()) {
+// printf("sys ex:error, data clear\n");
+// _data.clear();
+      return false;
+    }
     message->data.assign(_data.begin() + index, _data.begin() + index_end);
     _data.erase(_data.begin(), _data.begin() + index_end + 1);
     return true;
   }
-  if (index + dataByteLength > _data.size()) { return false; }
+  if (index + dataByteLength > _data.size()) {
+// printf("data len error: index:%d, dataByteLen:%d, data size:%d\n", index, dataByteLength, _data.size());
+// _data.clear();
+    return false;
+  }
   message->data.assign(_data.begin() + index, _data.begin() + index + dataByteLength);
   _data.erase(_data.begin(), _data.begin() + index + dataByteLength);
   return true;
