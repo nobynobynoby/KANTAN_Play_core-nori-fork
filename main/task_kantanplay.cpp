@@ -41,17 +41,22 @@ void task_kantanplay_t::task_func(task_kantanplay_t* me)
     } while (me->commandProccessor());
 
 #if !defined (M5UNIFIED_PC_BUILD)
-    taskYIELD();
+    if (ulTaskNotifyTake(pdTRUE, 0) == false)
 #endif
-    int next_msec = (next_usec + 128) >> 10;
     {
-      system_registry.task_status.setSuspend(system_registry_t::reg_task_status_t::bitindex_t::TASK_KANTANPLAY);
 #if defined (M5UNIFIED_PC_BUILD)
       M5.delay(1);
 #else
-      ulTaskNotifyTake(pdTRUE, next_msec);
-#endif
-      system_registry.task_status.setWorking(system_registry_t::reg_task_status_t::bitindex_t::TASK_KANTANPLAY);
+      int next_msec = (next_usec + 128) >> 10;
+      if (next_msec)
+      {
+        system_registry.task_status.setSuspend(system_registry_t::reg_task_status_t::bitindex_t::TASK_KANTANPLAY);
+        ulTaskNotifyTake(pdTRUE, next_msec);
+        system_registry.task_status.setWorking(system_registry_t::reg_task_status_t::bitindex_t::TASK_KANTANPLAY);
+      } else {
+        taskYIELD();
+      }
+      #endif
     }
   }
 }
@@ -217,7 +222,7 @@ uint32_t task_kantanplay_t::chordProc(void)
             auto velocity = manage->velocity;
             if (velocity) {
               velocity |= 0x80;
-              system_registry.midi_out_control.setNoteVelocity(midi_ch, note_number, 0);
+              // system_registry.midi_out_control.setNoteVelocity(midi_ch, note_number, 0);
               system_registry.midi_out_control.setNoteVelocity(midi_ch, note_number, velocity);
               hit_flg = true;
             }
@@ -775,7 +780,8 @@ void task_kantanplay_t::chordStepPlay(void)
     }
     if (flg_use) {
       uint8_t program = part_info->getTone();
-      uint8_t chvolume = part_info->getVolume() * 127 / 100;
+      uint8_t max_chvol = system_registry.runtime_info.getMIDIChannelVolumeMax();
+      uint16_t chvolume = part_info->getVolume() * max_chvol / 100;
       if (chvolume > 127) { chvolume = 127; }
       system_registry.midi_out_control.setProgramChange(midi_ch, program);
       system_registry.midi_out_control.setChannelVolume(midi_ch, chvolume);
@@ -916,7 +922,8 @@ void task_kantanplay_t::procSoundEffect(const def::command::command_param_t& com
     setPitchManage(part_index, pitch_index, midi_ch, note, velocity, press_usec, press_usec + autorelease_usec);
     press_usec += displacement_usec;
     uint8_t program = part_info->getTone();
-    uint8_t chvolume = part_info->getVolume() * 127 / 100;
+    uint8_t max_chvol = system_registry.runtime_info.getMIDIChannelVolumeMax();
+    uint16_t chvolume = part_info->getVolume() * max_chvol / 100;
     if (chvolume > 127) { chvolume = 127; }
     system_registry.midi_out_control.setProgramChange(midi_ch, program);
     system_registry.midi_out_control.setChannelVolume(midi_ch, chvolume);
@@ -1069,7 +1076,8 @@ void task_kantanplay_t::procNoteButton(const def::command::command_param_t& comm
   if (note < 128) {
     // TODO:ボリュームの設定をスロット情報から取得する
     uint8_t volume = 100;
-    uint8_t chvolume = volume * 127 / 100;
+    uint8_t max_chvol = system_registry.runtime_info.getMIDIChannelVolumeMax();
+    uint16_t chvolume = volume * max_chvol / 100;
     if (chvolume > 127) { chvolume = 127; }
 
     uint8_t program = system_registry.current_slot->slot_info.getNoteProgram();
@@ -1108,7 +1116,8 @@ void task_kantanplay_t::procDrumButton(const def::command::command_param_t& comm
   if (note < 128) {
     // TODO:ボリュームの設定をスロット情報から取得する
     uint8_t volume = 100;
-    uint8_t chvolume = volume * 127 / 100;
+    uint8_t max_chvol = system_registry.runtime_info.getMIDIChannelVolumeMax();
+    uint16_t chvolume = volume * max_chvol / 100;
     if (chvolume > 127) { chvolume = 127; }
     midi_ch = def::midi::channel_10;
     manage->midi_ch = midi_ch;

@@ -21,13 +21,23 @@ public:
 
   bool begin(void) override;
   void end(void) override;
-  size_t write(const uint8_t* data, size_t length) override;
-  size_t read(uint8_t* data, size_t length) override;
-  void setEnable(bool tx_enable, bool rx_enable) override;
+  // size_t write(const uint8_t* data, size_t length) override;
+  // size_t read(uint8_t* data, size_t length) override;
 
+  void addMessage(const uint8_t* data, size_t length) override;
+  bool sendFlush(void) override;
+
+  std::vector<uint8_t> read(void) override;
+
+  void setUseTxRx(bool tx_enable, bool rx_enable) override;
+
+  static void decodeReceive(const uint8_t* data, size_t length);
 private:
+
+  std::vector<uint8_t> _tx_data;
   config_t _config;
-  bool _is_begin;
+  uint8_t _tx_runningStatus = 0;
+  bool _is_begin = false;
 };
 
 } // namespace midi_driver

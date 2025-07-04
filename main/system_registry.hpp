@@ -39,7 +39,7 @@ public:
         bool check(const def::command::command_param_t& command_param) const;
         uint32_t getChangeCounter(void) const { return _working_command_change_counter; }
 
-#if __has_include (<freertos/freertos.h>)
+#if __has_include (<freertos/FreeRTOS.h>)
         void setNotifyTaskHandle(TaskHandle_t handle);
 protected:
         void _execNotify(void) const { if (_task_handle != nullptr) { xTaskNotify(_task_handle, true, eNotifyAction::eSetValueWithOverwrite); } }
@@ -122,16 +122,28 @@ protected:
 
     // ポートCに関する設定情報
     struct reg_midi_port_setting_t : public registry_t {
-        reg_midi_port_setting_t(void) : registry_t(4, 0, DATA_SIZE_8) {}
+        reg_midi_port_setting_t(void) : registry_t(8, 0, DATA_SIZE_8) {}
         enum index_t : uint16_t {
             PORT_C_MIDI,
             BLE_MIDI,
+            USB_MIDI,
+            INSTACHORD_LINK_PORT,
+            INSTACHORD_LINK_DEV,
         };
         void setPortCMIDI(def::command::ex_midi_mode_t mode) { set8(PORT_C_MIDI, static_cast<uint8_t>(mode)); }
         def::command::ex_midi_mode_t getPortCMIDI(void) const { return static_cast<def::command::ex_midi_mode_t>(get8(PORT_C_MIDI)); }
 
         void setBLEMIDI(def::command::ex_midi_mode_t mode) { set8(BLE_MIDI, static_cast<uint8_t>(mode)); }
         def::command::ex_midi_mode_t getBLEMIDI(void) const { return static_cast<def::command::ex_midi_mode_t>(get8(BLE_MIDI)); }
+
+        void setUSBMIDI(def::command::ex_midi_mode_t mode) { set8(USB_MIDI, static_cast<uint8_t>(mode)); }
+        def::command::ex_midi_mode_t getUSBMIDI(void) const { return static_cast<def::command::ex_midi_mode_t>(get8(USB_MIDI)); }
+
+        void setInstaChordLinkPort(def::command::instachord_link_port_t mode) { set8(INSTACHORD_LINK_PORT, static_cast<uint8_t>(mode)); }
+        def::command::instachord_link_port_t getInstaChordLinkPort(void) const { return static_cast<def::command::instachord_link_port_t>(get8(INSTACHORD_LINK_PORT)); }
+
+        void setInstaChordLinkDev(def::command::instachord_link_dev_t device) { set8(INSTACHORD_LINK_DEV, static_cast<uint8_t>(device)); }
+        def::command::instachord_link_dev_t getInstaChordLinkDev(void) const { return static_cast<def::command::instachord_link_dev_t>(get8(INSTACHORD_LINK_DEV)); }
     } midi_port_setting;
 
     // 実行時に変化する情報 (設定画面が存在しない可変情報)
@@ -164,6 +176,10 @@ protected:
             EDIT_VELOCITY,
             BUTTON_MAPPING_SWITCH,
             DEVELOPER_MODE,
+            MIDI_CHVOL_MAX,
+            MIDI_PORT_STATE_PC,  // ポートC
+            MIDI_PORT_STATE_BLE, // BLE MIDI
+            MIDI_PORT_STATE_USB, // USB MIDI
         };
 
         // 音が鳴ったパートへの発光エフェクト設定
@@ -256,6 +272,23 @@ protected:
         // 開発者モード
         void setDeveloperMode(bool enabled) { set8(DEVELOPER_MODE, enabled); }
         bool getDeveloperMode(void) const { return get8(DEVELOPER_MODE); }
+
+        // MIDIチャンネルボリュームの最大値
+        // ※ Instachord Link時に85に下げる。通常時は127とする
+        void setMIDIChannelVolumeMax(uint8_t max_volume) { set8(MIDI_CHVOL_MAX, max_volume); }
+        uint8_t getMIDIChannelVolumeMax(void) const { return get8(MIDI_CHVOL_MAX); }
+
+        // MIDIポートCの状態
+        void setMidiPortStatePC(def::command::midiport_info_t mode) { set8(MIDI_PORT_STATE_PC, static_cast<uint8_t>(mode)); }
+        def::command::midiport_info_t getMidiPortStatePC(void) const { return static_cast<def::command::midiport_info_t>(get8(MIDI_PORT_STATE_PC)); }
+
+        // BLE MIDIの状態
+        void setMidiPortStateBLE(def::command::midiport_info_t mode) { set8(MIDI_PORT_STATE_BLE, static_cast<uint8_t>(mode)); }
+        def::command::midiport_info_t getMidiPortStateBLE(void) const { return static_cast<def::command::midiport_info_t>(get8(MIDI_PORT_STATE_BLE)); }
+
+        // USB MIDIの状態
+        void setMidiPortStateUSB(def::command::midiport_info_t mode) { set8(MIDI_PORT_STATE_USB, static_cast<uint8_t>(mode)); }
+        def::command::midiport_info_t getMidiPortStateUSB(void) const { return static_cast<def::command::midiport_info_t>(get8(MIDI_PORT_STATE_USB)); }
     } runtime_info;
 
     struct reg_popup_notify_t : public registry_t {
@@ -415,34 +448,30 @@ protected:
         void refresh(void) { for (int i = 0; i < def::hw::max_rgb_led; ++i) { set32(i * 4, get32(i * 4), true); } }
     };
 
+    // MIDI出力コントロール
     struct reg_midi_out_control_t : public registry_base_t {
-        enum index_t : uint16_t {
-            MIDI_CONTROL_NOTE_CH1 = 0,
-            MIDI_CONTROL_NOTE_END = def::midi::max_note * def::midi::channel_max,
-            MIDI_CONTROL_PROGRAM_CH1 = MIDI_CONTROL_NOTE_END,
-            MIDI_CONTROL_PROGRAM_END = MIDI_CONTROL_PROGRAM_CH1 + def::midi::channel_max,
-            MIDI_CONTROL_VOLUME_CH1 = MIDI_CONTROL_PROGRAM_END,
-            MIDI_CONTROL_VOLUME_END = MIDI_CONTROL_VOLUME_CH1 + def::midi::channel_max,
-            MIDI_CONTROL_CHANGE_START = MIDI_CONTROL_VOLUME_END,
-            MIDI_CONTROL_CHANGE_END = MIDI_CONTROL_CHANGE_START + 128,
-        };
-        // MIDIチャンネルコントロール (ベロシティ128×16チャンネル分 + プログラムチェンジ+チャンネルボリューム×16チャンネル分)
         // 読み出しには非対応、値をセットすると履歴として取得できる
         reg_midi_out_control_t(void) : registry_base_t(128) {}
 
+        void setMessage(uint8_t status, uint8_t data1, uint8_t data2 = 0) {
+            set16(status, data1 + (data2 << 8));
+        }
         void setNoteVelocity(uint8_t channel, uint8_t note, uint8_t value) {
-            set8(MIDI_CONTROL_NOTE_CH1 + channel * 128 + note, value);
+            uint8_t status = 0x80 + ((value & 0x80) >> 3);
+            setMessage((status | channel), note, value & 0x7F);
         }
         void setProgramChange(uint8_t channel, uint8_t value) {
-            set8(MIDI_CONTROL_PROGRAM_CH1 + channel, value);
+            uint8_t status = 0xC0;
+            setMessage((status | channel), value);
+        }
+        void setControlChange(uint8_t channel, uint8_t control, uint8_t value) {
+            uint8_t status = 0xB0;
+            setMessage((status | channel), control, value);
         }
         void setChannelVolume(uint8_t channel, uint8_t value) {
-            set8(MIDI_CONTROL_VOLUME_CH1 + channel, value);
+            setControlChange(channel, 7, value);
         }
-        void setControlChange(uint8_t control, uint8_t value) {
-            set8(MIDI_CONTROL_CHANGE_START + control, value, true);
-        }
-    } midi_out_control;    // MIDI出力コントロール
+    } midi_out_control;
 
     // コード演奏アルペジオパターン
     struct reg_arpeggio_table_t : public registry_t {
@@ -584,8 +613,13 @@ protected:
             if (spb > def::app::step_per_beat_max) { spb = def::app::step_per_beat_max; }
             set8(STEP_PER_BEAT, spb);
         }
-        uint8_t getStepPerBeat(void) const { return get8(STEP_PER_BEAT); }
-        // uint8_t getStepPerBeat(void) const { return 3; }
+        uint8_t getStepPerBeat(void) const {
+            auto spb = get8(STEP_PER_BEAT);
+            if (spb < def::app::step_per_beat_min || spb > def::app::step_per_beat_max) {
+                spb = def::app::step_per_beat_default;
+            }
+            return spb;
+        }
 
         // ノート演奏時のスケール
         void setNoteScale(uint8_t scale) { set8(NOTE_SCALE, scale); }
@@ -764,7 +798,7 @@ protected:
     };
 
     struct reg_command_request_t : public registry_t {
-#if __has_include (<freertos/freertos.h>)
+#if __has_include (<freertos/FreeRTOS.h>)
         using registry_t::setNotifyTaskHandle;
 #endif
         reg_command_request_t(void) : registry_t(4, 32, DATA_SIZE_16) {}
@@ -1079,7 +1113,9 @@ protected:
     reg_command_mapping_t command_mapping_current { def::hw::max_button_mask };      // 現在のボタンマッピングテーブル
     reg_command_mapping_t command_mapping_external { def::hw::max_button_mask };     // 外部機器ボタンのマッピングテーブル
     reg_command_mapping_t command_mapping_port_b { 4 };     // 外部機器ボタンのマッピングテーブル
-    reg_midi_command_mapping_t command_mapping_midinote;    // MIDIコマンドマッピングテーブル
+    reg_midi_command_mapping_t command_mapping_midinote;    // MIDIノートへのコマンドマッピングテーブル
+    reg_midi_command_mapping_t command_mapping_midicc15;    // MIDI CCへのコマンドマッピングテーブル
+    reg_midi_command_mapping_t command_mapping_midicc16;    // MIDI CCへのコマンドマッピングテーブル
 
     reg_command_mapping_t command_mapping_custom_main { def::hw::max_button_mask };  // メインボタンの割当カスタマイズテーブル
 
