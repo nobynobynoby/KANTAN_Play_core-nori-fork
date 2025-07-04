@@ -343,6 +343,8 @@ Button Index mapping
       (const char*[]){ nullptr, },    // master_vol_set
       (const char*[]){ nullptr, },    // master_key_ud
       (const char*[]){ nullptr, },    // master_key_set
+      (const char*[]){ nullptr, },    // target_key_set
+      (const char*[]){ nullptr, },    // slot_select_ud
       (const char*[]){ nullptr, },    // chord_beat
       (const char*[]){ nullptr, },    // chord_step_reset_request
       (const char*[]){ nullptr, },    // power_control
