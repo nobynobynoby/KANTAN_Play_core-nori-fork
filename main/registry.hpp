@@ -95,7 +95,7 @@ protected:
 template <typename T>
 class registry_map_t : public registry_base_t {
 public:
-  constexpr registry_map_t<T>(T default_value)
+  constexpr registry_map_t(T default_value)
   : registry_base_t { 0 }
   , _default_value { default_value } {};
 

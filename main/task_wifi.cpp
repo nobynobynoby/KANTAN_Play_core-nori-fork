@@ -777,7 +777,15 @@ static TaskHandle_t _wifi_info_task_handle = nullptr;
 static bool wps_enabled = false;
 
 static bool wpsStart() {
-  esp_wps_config_t config = WPS_CONFIG_INIT_DEFAULT(WPS_TYPE_PBC);
+  // esp_wps_config_t config = WPS_CONFIG_INIT_DEFAULT(WPS_TYPE_PBC);
+  esp_wps_config_t config;
+  config.wps_type = WPS_TYPE_PBC;
+  strncpy(config.factory_info.manufacturer, "ESPRESSIF", sizeof(config.factory_info.manufacturer) - 1);
+  strncpy(config.factory_info.model_number, CONFIG_IDF_TARGET, sizeof(config.factory_info.model_number) - 1);
+  strncpy(config.factory_info.model_name, "ESPRESSIF IOT", sizeof(config.factory_info.model_name) - 1);
+  strncpy(config.factory_info.device_name, "ESP DEVICE", sizeof(config.factory_info.device_name) - 1);
+  strncpy(config.pin, "00000000", sizeof(config.pin) - 1);
+
   esp_err_t err = esp_wifi_wps_enable(&config);
   if (err != ESP_OK) {
     M5_LOGE("WPS Enable Failed: 0x%x: %s", err, esp_err_to_name(err));

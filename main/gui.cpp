@@ -135,7 +135,7 @@ static rect_t rect_or(const rect_t &a, const rect_t &b)
 
 struct draw_param_t
 {
-  static constexpr const int max_clip_rect = 16;
+  static constexpr const int max_clip_rect = 23;
   rect_t clip_rect[max_clip_rect];
   rect_t invalidated_rect[max_clip_rect];
   uint32_t current_msec = 0;
@@ -160,28 +160,36 @@ struct draw_param_t
     static constexpr const int w0 = main_btn_width;
 
     // ヘッダ部
-    clip_rect[0] = { 0, 0, disp_width, header_height };  // 240 x 24 = 5760
+    clip_rect[0] = {               0, 0, disp_width>>1, header_height };  // 120 x 24 = 2880
+    clip_rect[1] = { disp_width >> 1, 0, disp_width>>1, header_height };
 
+    auto pw_half = part_width >> 1;
     // ６個のパート
-    clip_rect[1] = {              0, y0, part_width, part_height }; // 80 x 84 = 6720
-    clip_rect[2] = {              0, y1, part_width, part_height };
-    clip_rect[3] = { part_width * 1, y0, part_width, part_height };
-    clip_rect[4] = { part_width * 1, y1, part_width, part_height };
-    clip_rect[5] = { part_width * 2, y0, part_width, part_height };
-    clip_rect[6] = { part_width * 2, y1, part_width, part_height };
+    clip_rect[ 2] = {          0, y0, pw_half, part_height }; // 40 x 84 = 3360
+    clip_rect[ 3] = {    pw_half, y0, pw_half, part_height };
+    clip_rect[ 4] = {          0, y1, pw_half, part_height };
+    clip_rect[ 5] = {    pw_half, y1, pw_half, part_height };
+    clip_rect[ 6] = {2 * pw_half, y0, pw_half, part_height };
+    clip_rect[ 7] = {3 * pw_half, y0, pw_half, part_height };
+    clip_rect[ 8] = {2 * pw_half, y1, pw_half, part_height };
+    clip_rect[ 9] = {3 * pw_half, y1, pw_half, part_height };
+    clip_rect[10] = {4 * pw_half, y0, pw_half, part_height };
+    clip_rect[11] = {5 * pw_half, y0, pw_half, part_height };
+    clip_rect[12] = {4 * pw_half, y1, pw_half, part_height };
+    clip_rect[13] = {5 * pw_half, y1, pw_half, part_height };
 
     // サブボタン部
-    clip_rect[ 7] = {                0, y2, disp_width >> 2, sub_btns_height }; // 120 x 32 = 3840
-    clip_rect[ 9] = { disp_width  >> 2, y2, disp_width >> 2, sub_btns_height };
-    clip_rect[12] = { disp_width  >> 1, y2, disp_width >> 2, sub_btns_height };
-    clip_rect[14] = { disp_width*3>> 2, y2, disp_width >> 2, sub_btns_height };
+    clip_rect[14] = {                0, y2, disp_width >> 2, sub_btns_height }; // 60 x 32 = 1920
+    clip_rect[16] = { disp_width  >> 2, y2, disp_width >> 2, sub_btns_height };
+    clip_rect[19] = { disp_width  >> 1, y2, disp_width >> 2, sub_btns_height };
+    clip_rect[21] = { disp_width*3>> 2, y2, disp_width >> 2, sub_btns_height };
 
     // メインボタン部
-    clip_rect[ 8] = { 0 * w0, y3, w0, main_btns_height }; // 48 x 96 = 4608
-    clip_rect[10] = { 1 * w0, y3, w0, main_btns_height };
-    clip_rect[11] = { 2 * w0, y3, w0, main_btns_height };
-    clip_rect[13] = { 3 * w0, y3, w0, main_btns_height };
-    clip_rect[15] = { 4 * w0, y3, w0, main_btns_height };
+    clip_rect[15] = { 0 * w0, y3, w0, main_btns_height }; // 48 x 96 = 4608
+    clip_rect[17] = { 1 * w0, y3, w0, main_btns_height };
+    clip_rect[18] = { 2 * w0, y3, w0, main_btns_height };
+    clip_rect[20] = { 3 * w0, y3, w0, main_btns_height };
+    clip_rect[22] = { 4 * w0, y3, w0, main_btns_height };
   }
   void resetInvalidatedRect(void)
   {
@@ -696,11 +704,11 @@ public:
 
     int xc = x + (w >> 1);
     int yc = y + h - 5;
-    canvas->fillCircle(xc, yc, 2, level > 0 ? TFT_WHITE : TFT_DARKGREY);
-    canvas->fillArc(xc, yc,  7,  6, 230, 310, level > 1 ? TFT_WHITE : TFT_DARKGREY);
-    canvas->fillArc(xc, yc, 11, 10, 230, 310, level > 2 ? TFT_WHITE : TFT_DARKGREY);
-    canvas->fillArc(xc, yc, 15, 14, 230, 310, level > 3 ? TFT_WHITE : TFT_DARKGREY);
-    canvas->fillArc(xc, yc, 19, 18, 230, 310, level > 4 ? TFT_WHITE : TFT_DARKGREY);
+    canvas->fillCircle(xc, yc, 2, level > 0 ? 0xFFFFFFu : 0x3F3F3Fu);
+    canvas->fillArc(xc, yc,  7,  6, 230, 310, level > 1 ? 0xFFFFFFu : 0x3F3F3Fu);
+    canvas->fillArc(xc, yc, 11, 10, 230, 310, level > 2 ? 0xFFFFFFu : 0x3F3F3Fu);
+    canvas->fillArc(xc, yc, 15, 14, 230, 310, level > 3 ? 0xFFFFFFu : 0x3F3F3Fu);
+    canvas->fillArc(xc, yc, 19, 18, 230, 310, level > 4 ? 0xFFFFFFu : 0x3F3F3Fu);
     if (level < 0) {
       canvas->drawLine(offset_x, offset_y, offset_x+w, offset_y+h, TFT_RED);
       canvas->drawLine(offset_x, offset_y+h, offset_x+w, offset_y, TFT_RED);
@@ -778,6 +786,80 @@ public:
   }
 };
 static ui_wifi_ap_info_t ui_wifi_ap_info;
+
+struct ui_midiport_info_t : public ui_base_t
+{
+protected:
+    static constexpr uint32_t images[3][5] = {
+   // { 0b11111110000000001111111100000000
+      { __builtin_bswap32(0b11110000000000000000011111000000)
+      , __builtin_bswap32(0b11010000000000001000110001100000)
+      , __builtin_bswap32(0b11110111101111011110110000000000)
+      , __builtin_bswap32(0b10000100101000001000110001100000)
+      , __builtin_bswap32(0b10000111101000001110011111000000)
+      },
+      { __builtin_bswap32(0b01111110001100000001111111000000)
+      , __builtin_bswap32(0b01100011001100000001100000000000)
+      , __builtin_bswap32(0b01111110001100000001111110000000)
+      , __builtin_bswap32(0b01100011001100000001100000000000)
+      , __builtin_bswap32(0b01111110001111111001111111000000)
+      },
+      { __builtin_bswap32(0b01100011000111111001111110000000)
+      , __builtin_bswap32(0b01100011001100000001100011000000)
+      , __builtin_bswap32(0b01100011000111110001111110000000)
+      , __builtin_bswap32(0b01100011000000011001100011000000)
+      , __builtin_bswap32(0b00111110001111110001111110000000)
+      },
+    };
+    def::command::midiport_info_t _ports[3] = { def::command::midiport_info_t::mp_off };
+    bool _visible = false;
+
+public:
+  void update_impl(draw_param_t *param, int offset_x, int offset_y) override {
+    ui_base_t::update_impl(param, offset_x, offset_y);
+    auto p0 = system_registry.runtime_info.getMidiPortStatePC();
+    auto p1 = system_registry.runtime_info.getMidiPortStateBLE();
+    auto p2 = system_registry.runtime_info.getMidiPortStateUSB();
+    if (_ports[0] != p0 || _ports[1] != p1 || _ports[2] != p2) {
+      _ports[0] = p0;
+      _ports[1] = p1;
+      _ports[2] = p2;
+      bool visible = p0 != def::command::midiport_info_t::mp_off
+                  || p1 != def::command::midiport_info_t::mp_off
+                  || p2 != def::command::midiport_info_t::mp_off;
+      if (_visible != visible) {
+        _visible = visible;
+        int w = (visible)
+              ? 26 : 0;
+        if (w != _target_rect.w) {
+          _target_rect.x -= w - _target_rect.w;
+          _target_rect.w = w;
+        }
+      }
+      param->addInvalidatedRect({offset_x, offset_y, _client_rect.w, _client_rect.h});
+    }
+  }
+
+  void draw_impl(draw_param_t *param, M5Canvas *canvas, int32_t offset_x,
+                          int32_t offset_y, const rect_t *clip_rect) override
+  {
+    int x = offset_x;
+    int w = _client_rect.w;
+    for (int i = 0; i < 3; ++i) {
+      int y = offset_y + (i * 8);
+      uint32_t color = 0x303030u;
+      switch (_ports[i]) {
+      case def::command::midiport_info_t::mp_enabled:
+        color = 0x606060u; break;
+      case def::command::midiport_info_t::mp_connected:
+        color = 0xFFFFFFu; break;
+      default: break;
+      }
+      canvas->drawBitmap(x, y, (const uint8_t*)images[i], 32, 5, color);
+    }
+  }
+};
+static ui_midiport_info_t ui_midiport_info;
 
 struct ui_icon_sequance_play_t : public ui_base_t
 {
@@ -2693,6 +2775,7 @@ protected:
   bool _is_closing = false;
   const bool _odd_even;
   int8_t _level = -1;
+  int8_t _prev_level = -1;
 
   void update_impl(draw_param_t *param, int offset_x, int offset_y) override
   {
@@ -2700,21 +2783,16 @@ protected:
 
     auto show = system_registry.runtime_info.getCurrentMode() == def::playmode::menu_mode;
     auto category = static_cast<def::menu_category_t>(system_registry.menu_status.getMenuCategory());
-    auto current_level = system_registry.menu_status.getCurrentLevel();
+    int current_level = system_registry.menu_status.getCurrentLevel();
 
     if ((current_level & 1) == _odd_even) {
-      if (_level != current_level) {
-        _client_rect.x = (_level < current_level)
-                       ?  disp_width
-                       : -disp_width;
-        _level = current_level;
-      }
+      _level = current_level;
     }
 
     // メニュー表示状態から非表示状態への遷移
     if (_is_visible && !_is_closing && (!show || _category != category || current_level != _level)) {
       _is_closing = true;
-      int x = current_level > _level ? -main_area_width : main_area_width;
+      int x = (_level < current_level) ? -main_area_width : main_area_width;
       _target_rect.x = x;
     } else
     if (show && (!_is_visible || _is_closing) && category != def::menu_category_t::menu_none && current_level == _level)
@@ -2723,6 +2801,10 @@ protected:
       _is_closing = false;
       _category = category;
       setTargetRect({0, header_height + menu_header_height, main_area_width, main_area_height - menu_header_height });
+
+      _client_rect.x = (_prev_level <= current_level)
+                      ?  main_area_width
+                      : -main_area_width;
 
       auto current_index = _level ? system_registry.menu_status.getSelectIndex(_level - 1) : 0;
       auto menu_item = menu_control.getItemBySequance(current_index);
@@ -2751,6 +2833,7 @@ protected:
         }
       }
     }
+    _prev_level = show ? current_level : -1;
     if (_is_visible && _is_closing && getClientRect() == getTargetRect()) {
       _is_visible = false;
     }
@@ -3025,6 +3108,8 @@ void gui_t::init(void)
   ui_wifi_sta_info.setClientRect(r);
   ui_wifi_ap_info.setTargetRect(r);
   ui_wifi_ap_info.setClientRect(r);
+  ui_midiport_info.setTargetRect(r);
+  ui_midiport_info.setClientRect(r);
   ui_icon_sequance_play.setTargetRect(r);
   ui_icon_sequance_play.setClientRect(r);
 
@@ -3071,6 +3156,7 @@ void gui_t::init(void)
   ui_right_icon_container.addChild(&ui_battery_info);
   ui_right_icon_container.addChild(&ui_wifi_sta_info);
   ui_right_icon_container.addChild(&ui_wifi_ap_info);
+  ui_right_icon_container.addChild(&ui_midiport_info);
   ui_right_icon_container.addChild(&ui_icon_sequance_play);  
 //*/
   ui_background.addChild(&ui_chord_part_container);
