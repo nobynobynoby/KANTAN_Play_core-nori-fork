@@ -16,15 +16,15 @@ bool task_port_b_t::start(void)
 {
 #if defined (M5UNIFIED_PC_BUILD)
 #else
-  xTaskCreatePinnedToCore((TaskFunction_t)task_func, "port_b", 2048, this, def::system::task_priority_port_b, nullptr, def::system::task_cpu_port_b);
-#endif
-
   pin_index[0] = M5.getPin(m5::pin_name_t::port_b_pin1); // pin1 == input side
   pin_index[1] = M5.getPin(m5::pin_name_t::port_b_pin2); // pin2 == output side
 
   for (int i = 0; i < def::hw::max_port_b_pins; ++i) {
     m5gfx::pinMode(pin_index[i], m5gfx::pin_mode_t::input_pullup);
   }
+
+  xTaskCreatePinnedToCore((TaskFunction_t)task_func, "port_b", 2048, this, def::system::task_priority_port_b, nullptr, def::system::task_cpu_port_b);
+#endif
 
   return true;
 }
