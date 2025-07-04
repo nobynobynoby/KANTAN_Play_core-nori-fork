@@ -774,6 +774,8 @@ Button Index mapping
       "♯"   , nullptr, "dim"  , { command::chord_semitone, 2,                               command::chord_modifier, KANTANMusic_Modifier_dim  },
       "♭"   , nullptr, "m7-5" , { command::chord_semitone, 1,                               command::chord_modifier, KANTANMusic_Modifier_m7_5 },
       "♯"   , nullptr, "m7-5" , { command::chord_semitone, 2,                               command::chord_modifier, KANTANMusic_Modifier_m7_5 },
+      "5"    , nullptr, "/7"  , { command::chord_bass_degree, 7, command::chord_degree, 5 },
+      "3"    , "〜"   , "/6♭"  , { command::chord_bass_semitone, 1, command::chord_bass_degree, 6, command::chord_minor_swap, 1, command::chord_degree, 3 },
       nullptr,nullptr,nullptr, {},
     };
   };
@@ -1058,6 +1060,8 @@ Button Index mapping
       { "sharp[dim]"   , { "♯ [ dim ]"      , nullptr              }, { command::chord_semitone, 2,                               command::chord_modifier, KANTANMusic_Modifier_dim  } },
       { "flat[m7_5]"   , { "♭ [ m7-5 ]"    , nullptr              }, { command::chord_semitone, 1,                               command::chord_modifier, KANTANMusic_Modifier_m7_5 } },
       { "sharp[m7_5]"  , { "♯ [ m7-5 ]"     , nullptr              }, { command::chord_semitone, 2,                               command::chord_modifier, KANTANMusic_Modifier_m7_5 } },
+      { "5 on 7"       , { "5/7"            , nullptr              }, { command::chord_bass_degree, 7, command::chord_degree, 5 } },
+      { "3swap on 6flat", { "3〜/6♭"       , nullptr              }, { command::chord_bass_semitone, 1, command::chord_bass_degree, 6, command::chord_minor_swap, 1, command::chord_degree, 3 } },
       { nullptr        , nullptr                                   , {} },
     };
     static constexpr const control_assignment_t external_table[] = {
@@ -1186,7 +1190,9 @@ Button Index mapping
       { "p5_edit"      , { "Part 5 Edit"    , "パート5 編集"       }, { command::part_edit, 5 } },
       { "p6_edit"      , { "Part 6 Edit"    , "パート6 編集"       }, { command::part_edit, 6 } },
       { ""             , { "---"            , nullptr             }, {} },
-      { nullptr        , nullptr                                   , {} },
+      { "5 on 7"       , { "5/7"            , nullptr              }, { command::chord_bass_degree, 7, command::chord_degree, 5 } },
+      { "3swap on 6flat",{ "3〜/6♭"        , nullptr              }, { command::chord_bass_semitone, 1, command::chord_bass_degree, 6, command::chord_minor_swap, 1, command::chord_degree, 3 } },
+     { nullptr        , nullptr                                   , {} },
     };
   }
 

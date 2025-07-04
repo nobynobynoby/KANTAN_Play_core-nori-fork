@@ -201,7 +201,7 @@ void task_operator_t::task_func(task_operator_t* me)
           auto pair = system_registry.command_mapping_current.getCommandParamArray(i);
           uint32_t color = 0;
           bool hit = true;
-          for (int j = 0; pair.array[j].command != def::command::none; ++j) {
+          for (int j = 0; j < 4 && pair.array[j].command != def::command::none; ++j) { //fix
             auto command_param = pair.array[j];
             color = getColorByCommand(command_param);
             hit &= system_registry.working_command.check(command_param);

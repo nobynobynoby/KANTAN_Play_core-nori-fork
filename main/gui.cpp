@@ -1139,7 +1139,7 @@ struct ui_main_buttons_t : public ui_base_t
         def::command::command_param_t command_param;
         int pindex = 0;
         bool hit = true;
-        for (int j = 0; cp_pair.array[j].command != def::command::none; ++j) {
+        for (int j = 0; j < 4 && cp_pair.array[j].command != def::command::none; ++j) { //fix
           pindex = j;
           command_param = cp_pair.array[j];
           hit &= system_registry.working_command.check(command_param);
