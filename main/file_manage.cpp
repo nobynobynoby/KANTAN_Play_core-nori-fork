@@ -13,7 +13,7 @@
  #include <SdFat.h>
  SdFat SD;
 #elif __has_include(<SD.h>)
- #include <SD.h>
+// #include <SD.h>
 #else
  #include <filesystem>
  #include <stdio.h>

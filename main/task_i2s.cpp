@@ -173,12 +173,12 @@ void task_i2s_t::task_func(task_i2s_t* me)
   size_t transfer_size;
 
 // M5.delay(4000);
-  // int preload = 0;
+#if __has_include(<driver/i2s_std.h>)
   do {
     // ++preload;
     i2s_channel_preload_data(_i2s_tx_handle, i2sbuf, buf_size, &transfer_size);
   } while (transfer_size == buf_size);
-
+#endif
   // M5_LOGD("preload: %d", preload);
 
   _i2s_start();

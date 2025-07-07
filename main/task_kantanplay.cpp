@@ -120,8 +120,6 @@ bool task_kantanplay_t::commandProccessor(void)
             if (autoplay != def::play::auto_play_mode_t::auto_play_running) {
               autoplay = def::play::auto_play_mode_t::auto_play_waiting;
               system_registry.runtime_info.setChordAutoplayState(autoplay);
-              // procChordBeat({ def::command::chord_beat, def::command::step_advance_t::on_beat }, is_pressed);
-              // system_registry.player_command.addQueue( { def::command::chord_beat, def::command::step_advance_t::on_beat } );
               system_registry.player_command.addQueue( { def::command::chord_degree, 1 } );
             }
             break;
@@ -146,6 +144,9 @@ uint32_t task_kantanplay_t::autoProc(void)
   uint32_t next_event_timing = INT32_MAX;
   const int progress_usec = (int32_t)(_current_usec - _prev_usec);
 
+  // 入力遅延の許容時間を更新
+  _auto_play_input_tolerating_remain_usec -= progress_usec;
+
   // 自動演奏 (ウラ拍) タイミング判定
   if (_auto_play_offbeat_remain_usec >= 0) {
     int remain_usec = _auto_play_offbeat_remain_usec - progress_usec;
@@ -167,6 +168,7 @@ uint32_t task_kantanplay_t::autoProc(void)
   if (_auto_play_onbeat_remain_usec >= 0) {
     int remain_usec = _auto_play_onbeat_remain_usec - progress_usec;
     if (remain_usec < 0) {
+      _auto_play_input_tolerating_remain_usec = def::app::input_tolerating_msec * 1000 + remain_usec;
       auto auto_play = system_registry.runtime_info.getChordAutoplayState();
       if (auto_play == def::play::auto_play_mode_t::auto_play_running)
       {
@@ -310,6 +312,9 @@ void task_kantanplay_t::procChordDegree(const def::command::command_param_t& com
     system_registry.chord_play.setLockedChordDegree(0);
   } 
 
+  const auto auto_play = system_registry.runtime_info.getChordAutoplayState();
+  const bool is_auto = auto_play == def::play::auto_play_mode_t::auto_play_running;
+  
   // 現在のDegreeと異なる場合
   if (current_degree != degree) {
     // 別のDegreeのボタンを離した場合は何もしない
@@ -317,6 +322,23 @@ void task_kantanplay_t::procChordDegree(const def::command::command_param_t& com
       return;
     }
     system_registry.chord_play.setChordDegree(degree);
+    if (is_auto && _auto_play_input_tolerating_remain_usec > 0) {
+      auto step_per_beat = system_registry.current_slot->slot_info.getStepPerBeat();
+      // if (2 <= step_per_beat)
+      {
+        // 自動演奏でオモテ拍の直後にDegreeボタンが押された場合 (オフビートが鳴る前に押された場合)
+        // ユーザーの演奏タイミングが遅れたものと見做してオモテ拍の処理を強制的に行うことで、
+        // 演奏サイクルが乱れないようにする。
+        _current_beat_index = step_per_beat - 1;
+//*
+        chordStepAdvance(true);
+/*/
+        chordStepAdvance();
+        chordStepPlay();
+//*/
+      }
+    }
+  
   }
 
   if (is_pressed) { // Degreeボタンを押したタイミングで次のオモテ拍での演奏オプションをセットしておく
@@ -327,8 +349,7 @@ void task_kantanplay_t::procChordDegree(const def::command::command_param_t& com
     // _next_option.minor_swap = system_registry.chord_play.getChordMinorSwap();
   }
 
-  const auto auto_play = system_registry.runtime_info.getChordAutoplayState();
-  const bool is_auto = auto_play == def::play::auto_play_mode_t::auto_play_running;
+
   // オンビート・オフビートそれぞれの自動化判定
   bool auto_on_beat = is_auto;
   bool auto_off_beat = is_auto || (system_registry.user_setting.getOffbeatStyle() == def::play::offbeat_style_t::offbeat_auto);
@@ -338,7 +359,6 @@ void task_kantanplay_t::procChordDegree(const def::command::command_param_t& com
 
   if (playflag)
   {
-    const auto auto_play = system_registry.runtime_info.getChordAutoplayState();
     if (auto_play == def::play::auto_play_mode_t::auto_play_none) {
       auto param = is_pressed
                  ? def::command::step_advance_t::on_beat
@@ -505,7 +525,7 @@ int32_t task_kantanplay_t::calcStepAdvance(const bool on_beat)
 }
 
 // アルペジエータのステップを進める
-void task_kantanplay_t::chordStepAdvance(void)
+void task_kantanplay_t::chordStepAdvance(bool disable_note_off)
 {
   const uint_fast8_t step_per_beat = system_registry.current_slot->slot_info.getStepPerBeat();
   if (step_per_beat < 1) {
@@ -616,7 +636,7 @@ void task_kantanplay_t::chordStepAdvance(void)
           firstStepCounter += (bool)(current_step <= 0);
         }
       }
-      if (note_off_flag) {
+      if (note_off_flag && !disable_note_off) {
         chordNoteOff(i);
       }
       step_list[i] = current_step;

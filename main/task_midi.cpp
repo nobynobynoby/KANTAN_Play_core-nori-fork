@@ -25,8 +25,7 @@ private:
   midi_driver::MIDIDriver _midi;
   system_registry_t::reg_task_status_t::bitindex_t _task_status_index;
 
-// インスタコード固有のコントロールチェンジが来た時、インスタコードモード連携モードに移行、
-// インスタコード連携モードのときはノートコントロール無効にして全ノートを転送
+// インスタコードリンク判定フラグ
   bool _flg_instachord_link = false;
   bool _flg_instachord_out = false;
 
@@ -54,6 +53,9 @@ public:
     memset(channel_volume, 100, sizeof(channel_volume));
     auto midi = &(me->_midi);
 
+    uint8_t tx_count = 0;
+    uint8_t rx_count = 0;
+
 #if !defined (M5UNIFIED_PC_BUILD)
     midi->setNotifyTaskHandle(xTaskGetCurrentTaskHandle());
 #endif
@@ -66,7 +68,8 @@ public:
       if (ulTaskNotifyTake(pdTRUE, 0) == 0)
       {
         system_registry.task_status.setSuspend(me->_task_status_index);
-        ulTaskNotifyTake(pdTRUE, (prev_rx_enable || prev_tx_enable) ? 1 : 128);
+        ulTaskNotifyTake(pdTRUE, (prev_tx_enable) ? 32 : 512);
+        // ulTaskNotifyTake(pdTRUE, 2048);
         system_registry.task_status.setWorking(me->_task_status_index);
       } 
 #endif
@@ -76,10 +79,11 @@ public:
         if (prev_rx_enable != rx_enable) {
           prev_rx_enable = rx_enable;
         }
-        midi->receive();
         midi_driver::MIDI_Message message;
         while (midi->receiveMessage(&message)) {
+          ++rx_count;
 //  printf("status:%02x  len:%d  data:%02x %02x\n", message.status, message.data.size(), message.data[0], message.data[1]);
+//  fflush(stdout);
           // MIDIスルーフラグ
           bool midi_thru = true;
           uint8_t channel = message.channel;
@@ -125,11 +129,10 @@ public:
               system_registry.operator_command.addQueue(command_param, velocity ? true : false);
             }
           }
-          if (midi_thru == true && message.data.size() <= 2) {
+          if (midi_thru == true && message.data.size() > 1 && message.data.size() <= 2) {
             // MIDIノートがコマンドマッピングされていない場合
             system_registry.midi_out_control.setMessage(message.status, message.data[0], message.data[1]);
           }
-          midi->receive();
         }
       }
 
@@ -207,7 +210,26 @@ public:
       }
       if (queued) {
         // MIDI送信バッファをフラッシュ
-        midi->sendFlush();
+        if (midi->sendFlush()) {
+          tx_count++;
+        };
+      }
+
+      switch (me->_task_status_index) {
+      case system_registry_t::reg_task_status_t::bitindex_t::TASK_MIDI_EXTERNAL:
+        system_registry.runtime_info.setMidiTxCountPC(tx_count);
+        system_registry.runtime_info.setMidiRxCountPC(rx_count);
+        break;
+      case system_registry_t::reg_task_status_t::bitindex_t::TASK_MIDI_BLE:
+        system_registry.runtime_info.setMidiTxCountBLE(tx_count);
+        system_registry.runtime_info.setMidiRxCountBLE(rx_count);
+        break;
+      case system_registry_t::reg_task_status_t::bitindex_t::TASK_MIDI_USB:
+        system_registry.runtime_info.setMidiTxCountUSB(tx_count);
+        system_registry.runtime_info.setMidiRxCountUSB(rx_count);
+        break;
+      default:
+        break;
       }
     }
   }
@@ -273,7 +295,7 @@ void task_midi_t::start(void)
     midi_driver::MIDI_Transport_UART::config_t config;
 
     // 内部SAM音源用MIDI
-    config.uart_port_num = 2; // UART_NUM_2;
+    config.uart_port_num = 1; // UART_NUM_1
     config.pin_tx = def::hw::pin::midi_tx;
     config.pin_rx = GPIO_NUM_NC;
     in_uart_midi_transport.setConfig(config);
@@ -281,7 +303,7 @@ void task_midi_t::start(void)
     in_uart_midi_transport.setUseTxRx(true, false);
 
     // 外部PortC用MIDI
-    config.uart_port_num = 1; // UART_NUM_1
+    config.uart_port_num = 2; // UART_NUM_2;
     config.pin_tx = M5.getPin(m5::pin_name_t::port_c_txd);
     config.pin_rx = M5.getPin(m5::pin_name_t::port_c_rxd);
     portc_midi_transport.setConfig(config);
@@ -348,10 +370,12 @@ void task_midi_t::task_func(task_midi_t* me)
       case def::command::instachord_link_port_t::iclp_ble:
         ble_midi_subtask.setInstaChordLink(false, output);
         break;
+#ifdef MIDI_TRANSPORT_USB_HPP
       case def::command::instachord_link_port_t::iclp_usb:
         usb_midi_subtask.setInstaChordLink(false, output);
         break;
-      default:
+#endif
+        default:
         // 何もしない
         break;
       }
@@ -364,9 +388,11 @@ void task_midi_t::task_func(task_midi_t* me)
       case def::command::instachord_link_port_t::iclp_ble:
         ble_midi_subtask.setInstaChordLink(true, output);
         break;
+#ifdef MIDI_TRANSPORT_USB_HPP
       case def::command::instachord_link_port_t::iclp_usb:
         usb_midi_subtask.setInstaChordLink(true, output);
         break;
+#endif
       default:
         // InstaChord Linkモードでない場合は、チャンネルボリュームの最大値を127にする
         chvol_max = 127;

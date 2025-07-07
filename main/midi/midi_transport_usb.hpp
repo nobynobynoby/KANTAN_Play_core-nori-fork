@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025 InstaChord Corp.
 
+#if __has_include(<usb/usb_host.h>)
 #ifndef MIDI_TRANSPORT_USB_HPP
 #define MIDI_TRANSPORT_USB_HPP
 
 #include "midi_driver.hpp"
+
+#include <usb/usb_host.h>
 
 namespace midi_driver {
 
@@ -37,6 +40,7 @@ public:
 private:
   static void usb_host_task(MIDI_Transport_USB* me);
   static void usb_client_task(MIDI_Transport_USB* me);
+  static void usb_client_cb(const usb_host_client_event_msg_t *event_msg, void *arg);
 
   std::vector<uint8_t> _tx_data;
   config_t _config;
@@ -46,3 +50,4 @@ private:
 } // namespace midi_driver
 
 #endif // MIDI_TRANSPORT_USB_HPP
+#endif // __has_include(<usb/usb_host.h>)

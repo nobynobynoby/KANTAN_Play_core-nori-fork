@@ -33,8 +33,8 @@ public:
 
   void setUseTxRx(bool tx_enable, bool rx_enable) override;
   
-
 private:
+  static void uart_rx_task(MIDI_Transport_UART* me);
   std::vector<uint8_t> _tx_data;
   config_t _config;
   uint8_t _tx_runningStatus = 0;

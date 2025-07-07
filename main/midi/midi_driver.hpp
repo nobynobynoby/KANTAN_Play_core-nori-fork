@@ -155,6 +155,7 @@ return result;
       return true;
     }
     bool receiveMessage(MIDI_Message* message) {
+      receive();
       return _decoder.popMessage(message);
     }
 

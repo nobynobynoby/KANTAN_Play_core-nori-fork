@@ -110,6 +110,9 @@ Degree操作コマンド {
   // 自動演奏(ウラ拍)の間隔時間 (usec) ※スイングに対応するため2つ用意する
   int32_t _auto_play_offbeat_cycle_usec[2] = { 0, };
 
+  // 自動演奏時のユーザーによるオンビート操作の遅延許容の残り時間 (usec)
+  int32_t _auto_play_input_tolerating_remain_usec = -1;
+
   // オンビート演奏間の経過時間 (usec)
   int32_t _reactive_onbeat_cycle_usec = -1;
 
@@ -138,7 +141,7 @@ Degree操作コマンド {
   void procChordBeat(const def::command::command_param_t& command_param, const bool is_pressed);
 
   void chordBeat(const bool on_beat);
-  void chordStepAdvance(void);
+  void chordStepAdvance(bool disable_note_off = false);
   void chordStepPlay(void);
   int32_t calcSwing_x100(void);
   int32_t calcStepAdvance(const bool on_beat);

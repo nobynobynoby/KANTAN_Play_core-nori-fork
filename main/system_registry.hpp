@@ -148,7 +148,7 @@ protected:
 
     // 実行時に変化する情報 (設定画面が存在しない可変情報)
     struct reg_runtime_info_t : public registry_t {
-        reg_runtime_info_t(void) : registry_t(32, 0, DATA_SIZE_8) {}
+        reg_runtime_info_t(void) : registry_t(36, 0, DATA_SIZE_8) {}
         enum index_t : uint16_t {
             PART_EFFECT_1,
             PART_EFFECT_2,
@@ -180,6 +180,12 @@ protected:
             MIDI_PORT_STATE_PC,  // ポートC
             MIDI_PORT_STATE_BLE, // BLE MIDI
             MIDI_PORT_STATE_USB, // USB MIDI
+            MIDI_TX_COUNT_PC,
+            MIDI_RX_COUNT_PC,
+            MIDI_TX_COUNT_BLE,
+            MIDI_RX_COUNT_BLE,
+            MIDI_TX_COUNT_USB,
+            MIDI_RX_COUNT_USB,
         };
 
         // 音が鳴ったパートへの発光エフェクト設定
@@ -289,6 +295,30 @@ protected:
         // USB MIDIの状態
         void setMidiPortStateUSB(def::command::midiport_info_t mode) { set8(MIDI_PORT_STATE_USB, static_cast<uint8_t>(mode)); }
         def::command::midiport_info_t getMidiPortStateUSB(void) const { return static_cast<def::command::midiport_info_t>(get8(MIDI_PORT_STATE_USB)); }
+
+        // ポートC MIDI送信カウンタ
+        void setMidiTxCountPC(uint8_t count) { set8(MIDI_TX_COUNT_PC, count); }
+        uint8_t getMidiTxCountPC(void) const { return get8(MIDI_TX_COUNT_PC); }
+
+        // BLE MIDI送信カウンタ
+        void setMidiTxCountBLE(uint8_t count) { set8(MIDI_TX_COUNT_BLE, count); }
+        uint8_t getMidiTxCountBLE(void) const { return get8(MIDI_TX_COUNT_BLE); }
+
+        // USB MIDI送信カウンタ
+        void setMidiTxCountUSB(uint8_t count) { set8(MIDI_TX_COUNT_USB, count); }
+        uint8_t getMidiTxCountUSB(void) const { return get8(MIDI_TX_COUNT_USB); }
+
+        // ポートC MIDI受信カウンタ
+        void setMidiRxCountPC(uint8_t count) { set8(MIDI_RX_COUNT_PC, count); }
+        uint8_t getMidiRxCountPC(void) const { return get8(MIDI_RX_COUNT_PC); }
+
+        // BLE MIDI受信カウンタ
+        void setMidiRxCountBLE(uint8_t count) { set8(MIDI_RX_COUNT_BLE, count); }
+        uint8_t getMidiRxCountBLE(void) const { return get8(MIDI_RX_COUNT_BLE); }
+
+        // USB MIDI受信カウンタ
+        void setMidiRxCountUSB(uint8_t count) { set8(MIDI_RX_COUNT_USB, count); }
+        uint8_t getMidiRxCountUSB(void) const { return get8(MIDI_RX_COUNT_USB); }
     } runtime_info;
 
     struct reg_popup_notify_t : public registry_t {

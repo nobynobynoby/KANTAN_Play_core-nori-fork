@@ -215,20 +215,26 @@ void MIDI_Transport_BLE::addMessage(const uint8_t* data, size_t length)
 
 bool MIDI_Transport_BLE::sendFlush(void)
 {
-  if (_tx_data.empty()) { return true; }
+  bool result = false;
 ESP_LOGV("BLE", "sendFlush called, tx_data size: %d", _tx_data.size());
 // printf("sendFlush called, tx_data size: %d\n", _tx_data.size());
   auto remote = remotecharacteristic;
   if (remote)
   {
-    remote->writeValue(_tx_data.data(), _tx_data.size(), false);
+    if (!_tx_data.empty()) {
+      remote->writeValue(_tx_data.data(), _tx_data.size(), false);
+    }
+    result = true;
   } else if (pCharacteristic) {
-    pCharacteristic->setValue( _tx_data.data(), _tx_data.size());
-    pCharacteristic->notify();
+    if (!_tx_data.empty()) {
+      pCharacteristic->setValue( _tx_data.data(), _tx_data.size());
+      pCharacteristic->notify();
+    }
+    result = true;
   }
   _tx_data.clear();
   _tx_runningStatus = 0;
-  return true;
+  return result;
 }
 
 #if 0
@@ -327,7 +333,6 @@ static MyClientCallback myClientCallback;
 void MIDI_Transport_BLE::setUseTxRx(bool tx_enable, bool rx_enable)
 {
   _instance = this;
-
   if (_use_tx == tx_enable && _use_rx == rx_enable) { return; }
 
   auto midi_service_uuid = BLEUUID(MIDI_SERVICE_UUID);
@@ -415,7 +420,6 @@ while (!pClient->setMTU(mtu)) {
       if (remoteservice != nullptr) {
         // remoteservice->getClient()->setMTU(_mtu_size);
         remotecharacteristic = remoteservice->getCharacteristic(midi_characteristic_uuid);
-      // InstaChordへの接続時
 /*
 if (remotecharacteristic->canRead()            ) { printf("canRead\n"); }
 if (remotecharacteristic->canWrite()           ) { printf("canWrite\n"); }

@@ -913,7 +913,9 @@ Button Index mapping
     static constexpr const int16_t swing_percent_min = 0;  // スウィング最小値
     static constexpr const int16_t swing_percent_default = 0;  //スウィング初期値
     static constexpr const int16_t swing_percent_max = 100; // スウィング最大値
-  
+
+    static constexpr const int16_t input_tolerating_msec = 50; // 自動演奏時の遅延入力に対する許容時間 ( msec )
+
     static constexpr const int autorelease_msec = 5000; // コード演奏モードでの 自動ノートオフまでの時間 5秒
     static constexpr const float arpeggio_reset_timeout_beats = 4.2f;
 
@@ -930,8 +932,8 @@ Button Index mapping
 
     static constexpr const uint32_t app_version_major = 0;
     static constexpr const uint32_t app_version_minor = 3;
-    static constexpr const uint32_t app_version_patch = 7;
-    static constexpr const char app_version_string[] = "037";
+    static constexpr const uint32_t app_version_patch = 8;
+    static constexpr const char app_version_string[] = "038";
     static constexpr const uint32_t app_version_raw = app_version_major<<16|app_version_minor<<8|app_version_patch;
 
     static constexpr const char url_manual[] = "https://kantan-play.com/core/manual/";

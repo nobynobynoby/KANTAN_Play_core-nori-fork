@@ -138,6 +138,18 @@ TODO:CoreS3でのSDカード挿抜状態判定を追加する
         if (br != M5.Display.getBrightness()) {
           M5.Display.setBrightness(br);
         }
+
+        static def::command::midiport_info_t prev_usb_port_info;
+        auto usb_port_info = system_registry.runtime_info.getMidiPortStateUSB();
+        if (prev_usb_port_info != usb_port_info)
+        { // USBホスト使用時はUSBへの電源供給をオンにする
+          prev_usb_port_info = usb_port_info;
+          if (usb_port_info == def::command::midiport_info_t::mp_off) {
+            M5.Power.setUsbOutput(false);
+          } else {
+            M5.Power.setUsbOutput(true);
+          }
+        }
       }
     }
   }

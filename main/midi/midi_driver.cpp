@@ -99,6 +99,9 @@ bool MIDI_Decoder::popMessage(MIDI_Message* message)
 {
   if (_data.empty()) { return false; }
 // printf("popMessage : data.size:%d\n", _data.size());
+//  printf("len:%d  data:%02X %02X %02X\n", _data.size(), _data[0], _data[1], _data[2]);
+//  fflush(stdout);
+
   size_t index = 0;
   if (_data[index] & 0x80) { // Status byte
     message->status = _data[index++];
@@ -106,33 +109,52 @@ bool MIDI_Decoder::popMessage(MIDI_Message* message)
   } else {
     if (_runningStatus < 0x80) {
       while (index < _data.size() && (_data[index] & 0x80) == 0) { ++index; }
-printf("popMessage : invalid data erase : index:%d\n", index);
+// printf("popMessage : invalid data erase : index:%d\n", index);
       _data.erase(_data.begin(), _data.begin() + index);
-      // return false;
-      _runningStatus = message->status;
+      return false;
+      // index = 0;
+      // _runningStatus = message->status;
     }
     message->status = _runningStatus;
   }
   size_t dataByteLength = getDataByteLength(message->status);
   if (dataByteLength == -1) {
-printf("popMessage : invalid data status:%02x\n", message->status);
-    _data.erase(_data.begin(), _data.begin() + index);
+    _runningStatus = 0;
+// printf("popMessage : invalid data status:%02x\n", message->status);
+    _data.erase(_data.begin());
+    // _data.erase(_data.begin(), _data.begin() + index);
     return false;
   }
 
-  if (dataByteLength == 0 && message->status == 0xF0)
-  { // System Exclusive
-    size_t index_end = index;
-    while (index_end < _data.size() && _data[index_end] != 0xF7) { ++index_end; }
-// printf("sys ex:len:%d  , end:%02x\n", _data.size(), _data[index_end]);
-    if (index_end == _data.size()) {
-// printf("sys ex:error, data clear\n");
-// _data.clear();
-      return false;
+  if (dataByteLength == 0) {
+    _runningStatus = 0;
+    if (message->status == 0xF0)
+    { // System Exclusive
+      size_t index_end = index;
+      // while (index_end < _data.size() && _data[index_end] != 0xF7) { ++index_end; }
+      while (index_end < _data.size() && ((_data[index_end] & 0x80) == 0)) { ++index_end; }
+      if (index_end == _data.size()) {
+        // システムエクスクルーシブの終了がまだバッファに入っていない場合
+        return false;
+      }
+      auto data = _data[index_end];
+      if (data > 0xF7) {
+        // システムエクスクルーシブ中に、システム・リアルタイム・メッセージが来た場合
+        // 当該メッセージを先に出力する
+        message->status = data;
+        message->data.clear();
+        // 当該メッセージをバッファから削除
+        _data.erase(_data.begin() + index_end);
+        return true;
+      }
+      // if (_data[index_end] == 0xF7) {
+      //   ++index_end; // システムエクスクルーシブの終了バイトを含める
+      // }
+  // printf("sys ex:len:%d  , end:%02x\n", _data.size(), _data[index_end]);
+      message->data.assign(_data.begin() + index, _data.begin() + index_end);
+      _data.erase(_data.begin(), _data.begin() + index_end);
+      return true;
     }
-    message->data.assign(_data.begin() + index, _data.begin() + index_end);
-    _data.erase(_data.begin(), _data.begin() + index_end + 1);
-    return true;
   }
   if (index + dataByteLength > _data.size()) {
 // printf("data len error: index:%d, dataByteLen:%d, data size:%d\n", index, dataByteLength, _data.size());
