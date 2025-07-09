@@ -203,8 +203,33 @@ public:
         }
         if (send) {
           if (tx_enable && (!me->_flg_instachord_link || me->_flg_instachord_out)) {
-            midi->sendMessage(status, data1, data2);
-            queued = true;
+            // Determine if this message should be sent to the current MIDI output based on output_dest setting
+            bool should_send_to_current_output = false;
+            def::midi::MidiOutputDest output_dest = system_registry.midi_output_setting.getOutputDestination(midi_ch);
+
+            switch (me->_task_status_index) {
+              case system_registry_t::reg_task_status_t::bitindex_t::TASK_MIDI_INTERNAL:
+                if (output_dest == def::midi::MidiOutputDest::midi_out_both ||
+                    output_dest == def::midi::MidiOutputDest::midi_out_internal) {
+                  should_send_to_current_output = true;
+                }
+                break;
+              case system_registry_t::reg_task_status_t::bitindex_t::TASK_MIDI_EXTERNAL:
+                if (output_dest == def::midi::MidiOutputDest::midi_out_both ||
+                    output_dest == def::midi::MidiOutputDest::midi_out_uart) {
+                  should_send_to_current_output = true;
+                }
+                break;
+              default:
+                // For other MIDI outputs (BLE, USB), the existing logic applies
+                should_send_to_current_output = true;
+                break;
+            }
+
+            if (should_send_to_current_output) {
+              midi->sendMessage(status, data1, data2);
+              queued = true;
+            }
           }
         }
       }

@@ -146,6 +146,14 @@ protected:
         def::command::instachord_link_dev_t getInstaChordLinkDev(void) const { return static_cast<def::command::instachord_link_dev_t>(get8(INSTACHORD_LINK_DEV)); }
     } midi_port_setting;
 
+    // チャンネルごとのMIDI出力設定
+    struct reg_midi_output_setting_t : public registry_t {
+        reg_midi_output_setting_t(void) : registry_t(16, 0, DATA_SIZE_8) {};
+        void setOutputDestination(uint8_t midi_channel, def::midi::MidiOutputDest value){ set8(midi_channel, (uint8_t)value); }
+        def::midi::MidiOutputDest getOutputDestination(uint8_t midi_channel) const { return (def::midi::MidiOutputDest)get8(midi_channel); }
+
+    } midi_output_setting;
+
     // 実行時に変化する情報 (設定画面が存在しない可変情報)
     struct reg_runtime_info_t : public registry_t {
         reg_runtime_info_t(void) : registry_t(36, 0, DATA_SIZE_8) {}

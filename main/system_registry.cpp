@@ -83,6 +83,8 @@ void system_registry_t::init(void)
   user_setting.init();
   midi_port_setting.init();
 
+  midi_output_setting.init();
+  
   runtime_info.init();
   popup_notify.init();
   popup_qr.init();

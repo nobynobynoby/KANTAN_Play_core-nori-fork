@@ -8,6 +8,16 @@
 
 namespace kanplay_ns {
 //-------------------------------------------------------------------------
+
+// MIDI出力先の表示名テーブル
+static constexpr const localize_text_array_t midi_output_dest_name_table = { (size_t)def::midi::MidiOutputDest::midi_out_max, (const localize_text_t[]){
+  // def::midi::MidiOutputDest 列挙型の値に対応
+  { "KP + UART", "本体+UART" }, // midi_out_both (0)
+  { "KP Only"  , "本体のみ" },  // midi_out_internal
+  { "UART Only", "UARTのみ" },  // midi_out_uart
+  { "None"     , "なし" },      // midi_out_none
+}};
+
 // extern instance
 menu_control_t menu_control;
 
@@ -1020,6 +1030,29 @@ struct mi_part_clipboard_t : public mi_selector_t {
   }
 };
 
+struct mi_channel_dest_t : public mi_selector_t {
+protected:
+  const uint8_t _midi_channel; // Store the MIDI channel
+
+public:
+  constexpr mi_channel_dest_t( def::menu_category_t cate, uint8_t seq, uint8_t level, const localize_text_t& title, uint8_t midi_channel )
+  : mi_selector_t { cate, seq, level, title, &midi_output_dest_name_table } // Use the common table
+  , _midi_channel { midi_channel } {}
+
+  int getValue(void) const override
+  {
+    return getMinValue() + (int)system_registry.midi_output_setting.getOutputDestination(_midi_channel);
+  }
+
+  bool setValue(int value) const override
+  {
+    if (mi_selector_t::setValue(value) == false) { return false; }
+    value -= getMinValue();
+    system_registry.midi_output_setting.setOutputDestination(_midi_channel, (def::midi::MidiOutputDest)value);
+    return true;
+  }
+};
+
 struct mi_song_tempo_t : public mi_normal_t {
   constexpr mi_song_tempo_t( def::menu_category_t cate, uint8_t seq, uint8_t level, const localize_text_t& title )
   : mi_normal_t { cate, seq, level, title }
@@ -1854,8 +1887,25 @@ static constexpr menu_item_ptr menu_system[] = {
   (const mi_tree_t          []){{ def::menu_category_t::menu_system,214,  2   , { "Volume"         , "音量"        }}},
   (const mi_vol_midi_t      []){{ def::menu_category_t::menu_system,215,   3  , { "MIDI Mastervol" , "MIDIマスター音量"}}},
   (const mi_vol_adcmic_t    []){{ def::menu_category_t::menu_system,216,   3  , { "ADC MicAmp"     , "ADCマイクアンプ" }}},
-  (const mi_all_reset_t     []){{ def::menu_category_t::menu_system,217,  2   , { "Reset All Settings", "全設定リセット"    }}},
-  (const mi_manual_qr_t     []){{ def::menu_category_t::menu_system,218, 1    , { "Manual QR"      , "説明書QR"     }}},
+  (const mi_tree_t          []){{ def::menu_category_t::menu_system,217,  2   , { "Output Dest"    , "出力先"        }}},
+  (const mi_channel_dest_t  []){{ def::menu_category_t::menu_system,218,   3  , { "Channel 1" , "チャンネル1" }, 1 - 1}},
+  (const mi_channel_dest_t  []){{ def::menu_category_t::menu_system,219,   3  , { "Channel 2" , "チャンネル2" }, 2 - 1}},
+  (const mi_channel_dest_t  []){{ def::menu_category_t::menu_system,220,   3  , { "Channel 3" , "チャンネル3" }, 3 - 1}},
+  (const mi_channel_dest_t  []){{ def::menu_category_t::menu_system,221,   3  , { "Channel 4" , "チャンネル4" }, 4 - 1}},
+  (const mi_channel_dest_t  []){{ def::menu_category_t::menu_system,222,   3  , { "Channel 5" , "チャンネル5" }, 5 - 1}},
+  (const mi_channel_dest_t  []){{ def::menu_category_t::menu_system,223,   3  , { "Channel 6" , "チャンネル6" }, 6 - 1}},
+  (const mi_channel_dest_t  []){{ def::menu_category_t::menu_system,224,   3  , { "Channel 7" , "チャンネル7" }, 7 - 1}},
+  (const mi_channel_dest_t  []){{ def::menu_category_t::menu_system,225,   3  , { "Channel 8" , "チャンネル8" }, 8 - 1}},
+  (const mi_channel_dest_t  []){{ def::menu_category_t::menu_system,226,   3  , { "Channel 9" , "チャンネル9" }, 9 - 1}},
+  (const mi_channel_dest_t  []){{ def::menu_category_t::menu_system,227,   3  , { "Channel 10" , "チャンネル10" }, 10 - 1}},
+  (const mi_channel_dest_t  []){{ def::menu_category_t::menu_system,228,   3  , { "Channel 11" , "チャンネル11" }, 11 - 1}},
+  (const mi_channel_dest_t  []){{ def::menu_category_t::menu_system,229,   3  , { "Channel 12" , "チャンネル12" }, 12 - 1}},
+  (const mi_channel_dest_t  []){{ def::menu_category_t::menu_system,230,   3  , { "Channel 13" , "チャンネル13" }, 13 - 1}},
+  (const mi_channel_dest_t  []){{ def::menu_category_t::menu_system,231,   3  , { "Channel 14" , "チャンネル14" }, 14- 1}},
+  (const mi_channel_dest_t  []){{ def::menu_category_t::menu_system,232,   3  , { "Channel 15" , "チャンネル15" }, 15- 1}},
+  (const mi_channel_dest_t  []){{ def::menu_category_t::menu_system,233,   3  , { "Channel 16" , "チャンネル16" }, 16- 1}},
+  (const mi_all_reset_t     []){{ def::menu_category_t::menu_system,234,  2   , { "Reset All Settings", "全設定リセット"    }}},
+  (const mi_manual_qr_t     []){{ def::menu_category_t::menu_system,235, 1    , { "Manual QR"      , "説明書QR"     }}},
   nullptr, // end of menu
 };
 // const size_t menu_system_size = sizeof(menu_system) / sizeof(menu_system[0]) - 1;
