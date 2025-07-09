@@ -63,46 +63,45 @@ asm (\
   ".section \".text\"\n")
 #endif
 
-IMPORT_FILE(.rodata, "99_Sample.json"       , "Sample.json"       ,  preset_00 );
-IMPORT_FILE(.rodata, "01_Simple_Guitar.json", "Simple_Guitar.json",  preset_01 );
-IMPORT_FILE(.rodata, "02_Simpl_Piano.json"  , "Simpl_Piano.json"  ,  preset_02 );
-IMPORT_FILE(.rodata, "11_Pop_01.json"       , "Pop_01.json"       ,  preset_11 );
-IMPORT_FILE(.rodata, "12_Pop_02.json"       , "Pop_02.json"       ,  preset_12 );
-IMPORT_FILE(.rodata, "13_Pop_03.json"       , "Pop_03.json"       ,  preset_13 );
-IMPORT_FILE(.rodata, "14_Pop_04.json"       , "Pop_04.json"       ,  preset_14 );
-IMPORT_FILE(.rodata, "15_Pop_05.json"       , "Pop_05.json"       ,  preset_15 );
-IMPORT_FILE(.rodata, "16_Pop_06.json"       , "Pop_06.json"       ,  preset_16 );
-IMPORT_FILE(.rodata, "17_Pop_07.json"       , "Pop_07.json"       ,  preset_17 );
-IMPORT_FILE(.rodata, "18_Pop_08.json"       , "Pop_08.json"       ,  preset_18 );
-IMPORT_FILE(.rodata, "19_Pop_09.json"       , "Pop_09.json"       ,  preset_19 );
-IMPORT_FILE(.rodata, "1A_Pop_10.json"       , "Pop_10.json"       ,  preset_1A );
-IMPORT_FILE(.rodata, "21_Rock_01.json"      , "Rock_01.json"      ,  preset_21 );
-IMPORT_FILE(.rodata, "22_Rock_02.json"      , "Rock_02.json"      ,  preset_22 );
-IMPORT_FILE(.rodata, "23_Rock_03.json"      , "Rock_03.json"      ,  preset_23 );
-IMPORT_FILE(.rodata, "24_Rock_04.json"      , "Rock_04.json"      ,  preset_24 );
-IMPORT_FILE(.rodata, "25_Rock_05.json"      , "Rock_05.json"      ,  preset_25 );
-IMPORT_FILE(.rodata, "26_Rock_06.json"      , "Rock_06.json"      ,  preset_26 );
-IMPORT_FILE(.rodata, "27_Rock_07.json"      , "Rock_07.json"      ,  preset_27 );
-IMPORT_FILE(.rodata, "31_Folk_01.json"      , "Folk_01.json"      ,  preset_31 );
-IMPORT_FILE(.rodata, "32_Folk_02.json"      , "Folk_02.json"      ,  preset_32 );
-IMPORT_FILE(.rodata, "41_Ballade_01.json"   , "Ballade_01.json"   ,  preset_41 );
-IMPORT_FILE(.rodata, "42_Ballade_02.json"   , "Ballade_02.json"   ,  preset_42 );
-IMPORT_FILE(.rodata, "43_Ballade_03.json"   , "Ballade_03.json"   ,  preset_43 );
-IMPORT_FILE(.rodata, "44_Ballade_04.json"   , "Ballade_04.json"   ,  preset_44 );
-IMPORT_FILE(.rodata, "45_Ballade_05.json"   , "Ballade_05.json"   ,  preset_45 );
-IMPORT_FILE(.rodata, "51_Dance_01.json"     , "Dance_01.json"     ,  preset_51 );
-IMPORT_FILE(.rodata, "52_Dance_02.json"     , "Dance_02.json"     ,  preset_52 );
-IMPORT_FILE(.rodata, "53_Dance_03.json"     , "Dance_03.json"     ,  preset_53 );
-IMPORT_FILE(.rodata, "54_Dance_04.json"     , "Dance_04.json"     ,  preset_54 );
-IMPORT_FILE(.rodata, "61_Punk_01.json"      , "Punk_01.json"      ,  preset_61 );
-IMPORT_FILE(.rodata, "62_Punk_02.json"      , "Punk_02.json"      ,  preset_62 );
-IMPORT_FILE(.rodata, "71_Game_01.json"      , "Game_01.json"      ,  preset_71 );
-IMPORT_FILE(.rodata, "72_Game_02.json"      , "Game_02.json"      ,  preset_72 );
-IMPORT_FILE(.rodata, "81_Samba_1.json"      , "Samba_1.json"      ,  preset_81 );
-IMPORT_FILE(.rodata, "82_Ska_1.json"        , "Ska_1.json"        ,  preset_82 );
-IMPORT_FILE(.rodata, "83_Orchestra_1.json"  , "Orchestra_1.json"  ,  preset_83 );
-IMPORT_FILE(.rodata, "84_Orchestra_2.json"  , "Orchestra_2.json"  ,  preset_84 );
-
+IMPORT_FILE(.rodata, "00_Simple_Guitar.json", "Simple_Guitar.json"       ,  preset_00 );
+IMPORT_FILE(.rodata, "01_Simple_Gtrx2.json" , "Simple_Guitarx2.json"     ,  preset_01 );
+IMPORT_FILE(.rodata, "02_Simple_Piano.json" , "Simple_Piano.json"        ,  preset_02 );
+IMPORT_FILE(.rodata, "11_Pop_01.json"       , "Pop01_16beatSw.json"      ,  preset_11 );
+IMPORT_FILE(.rodata, "12_Pop_02.json"       , "Pop02_BlueW.json"         ,  preset_12 );
+IMPORT_FILE(.rodata, "13_Pop_03.json"       , "Pop03_Yobikomi.json"      ,  preset_13 );
+IMPORT_FILE(.rodata, "14_Pop_04.json"       , "Pop04_ObLaDi.json"        ,  preset_14 );
+IMPORT_FILE(.rodata, "15_Pop_05.json"       , "Pop05_Ageha.json"         ,  preset_15 );
+IMPORT_FILE(.rodata, "16_Pop_06.json"       , "Pop06_Sofmap.json"        ,  preset_16 );
+IMPORT_FILE(.rodata, "17_Pop_07.json"       , "Pop07_DonQui.json"        ,  preset_17 );
+IMPORT_FILE(.rodata, "18_Pop_08.json"       , "Pop08_Aozora.json"        ,  preset_18 );
+IMPORT_FILE(.rodata, "19_Pop_09.json"       , "Pop09_Standard.json"      ,  preset_19 );
+IMPORT_FILE(.rodata, "1A_Pop_10.json"       , "Pop10_Kaiju.json"         ,  preset_1A );
+IMPORT_FILE(.rodata, "21_Rock_01.json"      , "Rock01_Iine.json"         ,  preset_21 );
+IMPORT_FILE(.rodata, "22_Rock_02.json"      , "Rock02_GtrKids.json"      ,  preset_22 );
+IMPORT_FILE(.rodata, "23_Rock_03.json"      , "Rock03_LovePhntm.json"    ,  preset_23 );
+IMPORT_FILE(.rodata, "24_Rock_04.json"      , "Rock04_Standard.json"     ,  preset_24 );
+IMPORT_FILE(.rodata, "25_Rock_05.json"      , "Rock05_Train.json"        ,  preset_25 );
+IMPORT_FILE(.rodata, "26_Rock_06.json"      , "Rock06_Ketobase.json"     ,  preset_26 );
+IMPORT_FILE(.rodata, "27_Rock_07.json"      , "Rock07_8Beat.json"        ,  preset_27 );
+IMPORT_FILE(.rodata, "31_Folk_01.json"      , "Folk01_Tombo.json"        ,  preset_31 );
+IMPORT_FILE(.rodata, "32_Folk_02.json"      , "Folk02_Stand.json"        ,  preset_32 );
+IMPORT_FILE(.rodata, "41_Ballade_01.json"   , "Ballade01_Lovin.json"     ,  preset_41 );
+IMPORT_FILE(.rodata, "42_Ballade_02.json"   , "Ballade02_Shonen.json"    ,  preset_42 );
+IMPORT_FILE(.rodata, "43_Ballade_03.json"   , "Ballade03_Yell.json"      ,  preset_43 );
+IMPORT_FILE(.rodata, "44_Ballade_04.json"   , "Ballade04_Hakujitsu.json" ,  preset_44 );
+IMPORT_FILE(.rodata, "45_Ballade_05.json"   , "Ballade05_Lovex3.json"    ,  preset_45 );
+IMPORT_FILE(.rodata, "51_Dance_01.json"     , "Dance01_GetWild.json"     ,  preset_51 );
+IMPORT_FILE(.rodata, "52_Dance_02.json"     , "Dance02_USA.json"         ,  preset_52 );
+IMPORT_FILE(.rodata, "53_Dance_03.json"     , "Dance03_Euro.json"        ,  preset_53 );
+IMPORT_FILE(.rodata, "54_Dance_04.json"     , "Dance04_Virtual.json"     ,  preset_54 );
+IMPORT_FILE(.rodata, "61_Punk_01.json"      , "Punk01_Linda.json"        ,  preset_61 );
+IMPORT_FILE(.rodata, "62_Punk_02.json"      , "Punk02_Natsu.json"        ,  preset_62 );
+IMPORT_FILE(.rodata, "71_Game_01.json"      , "Game01_Star.json"         ,  preset_71 );
+IMPORT_FILE(.rodata, "72_Game_02.json"      , "Game02_Chrono.json"       ,  preset_72 );
+IMPORT_FILE(.rodata, "81_Samba_1.json"      , "Samba_1.json"             ,  preset_81 );
+IMPORT_FILE(.rodata, "82_Ska_1.json"        , "Ska_1.json"               ,  preset_82 );
+IMPORT_FILE(.rodata, "83_Orchestra_1.json"  , "Orchestra_1.json"         ,  preset_83 );
+IMPORT_FILE(.rodata, "84_Orchestra_2.json"  , "Orchestra_2.json"         ,  preset_84 );
 
 namespace kanplay_ns {
 

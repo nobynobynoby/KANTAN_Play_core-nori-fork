@@ -120,7 +120,7 @@ protected:
         int8_t getTimeZone(void) const { return get8(TIMEZONE) / 4; }
     } user_setting;
 
-    // ポートCに関する設定情報
+    // MIDIポートに関する設定情報
     struct reg_midi_port_setting_t : public registry_t {
         reg_midi_port_setting_t(void) : registry_t(8, 0, DATA_SIZE_8) {}
         enum index_t : uint16_t {
@@ -129,6 +129,7 @@ protected:
             USB_MIDI,
             INSTACHORD_LINK_PORT,
             INSTACHORD_LINK_DEV,
+            INSTACHORD_LINK_STYLE,
         };
         void setPortCMIDI(def::command::ex_midi_mode_t mode) { set8(PORT_C_MIDI, static_cast<uint8_t>(mode)); }
         def::command::ex_midi_mode_t getPortCMIDI(void) const { return static_cast<def::command::ex_midi_mode_t>(get8(PORT_C_MIDI)); }
@@ -144,6 +145,9 @@ protected:
 
         void setInstaChordLinkDev(def::command::instachord_link_dev_t device) { set8(INSTACHORD_LINK_DEV, static_cast<uint8_t>(device)); }
         def::command::instachord_link_dev_t getInstaChordLinkDev(void) const { return static_cast<def::command::instachord_link_dev_t>(get8(INSTACHORD_LINK_DEV)); }
+
+        void setInstaChordLinkStyle(def::command::instachord_link_style_t style) { set8(INSTACHORD_LINK_STYLE, static_cast<uint8_t>(style)); }
+        def::command::instachord_link_style_t getInstaChordLinkStyle(void) const { return static_cast<def::command::instachord_link_style_t>(get8(INSTACHORD_LINK_STYLE)); }
     } midi_port_setting;
 
     // 実行時に変化する情報 (設定画面が存在しない可変情報)
@@ -538,7 +542,7 @@ protected:
         }
     };
     struct reg_part_info_t : public registry_t {
-        reg_part_info_t(void) : registry_t(8, 0, DATA_SIZE_8) {}
+        reg_part_info_t(void) : registry_t(12, 0, DATA_SIZE_8) {}
 
         enum index_t : uint16_t {
             PROGRAM_NUMBER,
@@ -548,6 +552,7 @@ protected:
             STROKE_SPEED,
             OCTAVE_OFFSET,
             VOICING,
+            ENABLED, // パートの有効/無効
         };
         void setTone(uint8_t program) { set8(PROGRAM_NUMBER, program); }
         uint8_t getTone(void) const { return get8(PROGRAM_NUMBER); }
@@ -567,6 +572,8 @@ protected:
         int getPosition(void) const { return (int8_t)get8(OCTAVE_OFFSET); }
         void setVoicing(uint8_t voicing) { set8(VOICING, voicing); }
         KANTANMusic_Voicing getVoicing(void) const { return (KANTANMusic_Voicing)get8(VOICING); }
+        void setEnabled(bool enabled) { set8(ENABLED, enabled); }
+        bool getEnabled(void) const { return get8(ENABLED); }
 
         void reset(void) {
             setTone(0);
@@ -576,6 +583,7 @@ protected:
             setStrokeSpeed(20);
             setPosition(0);
             setVoicing(0);
+            setEnabled(true);
         }
     };
     struct kanplay_part_t {
@@ -749,12 +757,6 @@ protected:
             PART_4_ENABLE,
             PART_5_ENABLE,
             PART_6_ENABLE,
-            PART_1_NEXT_ENABLE, // パートが次回の先頭周回から有効か否か
-            PART_2_NEXT_ENABLE,
-            PART_3_NEXT_ENABLE,
-            PART_4_NEXT_ENABLE,
-            PART_5_NEXT_ENABLE,
-            PART_6_NEXT_ENABLE,
             EDIT_TARGET_PART,
             EDIT_ENC2_TARGET, // 編集時のエンコーダ2のターゲット
             CURSOR_Y,    // 編集時カーソル縦方向位置
@@ -782,8 +784,6 @@ protected:
         int8_t getPartStep(uint8_t part_index) const { return get8(PART_1_STEP + part_index); }
         void setPartEnable(uint8_t part_index, uint8_t enable) { set8(PART_1_ENABLE + part_index, enable); }
         uint8_t getPartEnable(uint8_t part_index) const { return get8(PART_1_ENABLE + part_index); }
-        void setPartNextEnable(uint8_t part_index, uint8_t enable) { set8(PART_1_NEXT_ENABLE + part_index, enable); }
-        uint8_t getPartNextEnable(uint8_t part_index) const { return get8(PART_1_NEXT_ENABLE + part_index); }
         void setEditTargetPart(uint8_t part_index) { set8(EDIT_TARGET_PART, part_index); }
         uint8_t getEditTargetPart(void) const { return get8(EDIT_TARGET_PART); }
         void setEditEnc2Target(uint8_t target) { set8(EDIT_ENC2_TARGET, target); }

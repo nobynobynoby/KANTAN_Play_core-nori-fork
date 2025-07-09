@@ -29,7 +29,7 @@ public:
 
   std::vector<uint8_t> read(void) override;
 
-  void setUseTxRx(bool tx_enable, bool rx_enable) override;
+  void setUseTxRx(bool use_tx, bool use_rx) override;
 
   static void decodeReceive(const uint8_t* data, size_t length);
 private:

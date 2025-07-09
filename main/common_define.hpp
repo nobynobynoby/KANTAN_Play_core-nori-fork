@@ -300,7 +300,7 @@ Button Index mapping
       master_key_ud, master_key_set,
       target_key_set, // InstaChord側から目的のキーを設定するためのコマンド
       slot_select_ud, // スロット選択ボタンの上下操作
-      chord_beat,       // 1=onbeat / 2=offbeat
+      chord_beat,
       chord_step_reset_request, // 演奏ステップを次回オンビートのタイミングで先頭に戻す
       power_control,
       file_index_ud, file_index_set,
@@ -370,10 +370,6 @@ Button Index mapping
     enum autoplay_switch_t : uint8_t {
       autoplay_off = 0, autoplay_toggle, autoplay_start, autoplay_stop,
     };
-    enum step_advance_t : uint8_t {
-      on_beat = 1,
-      off_beat = 2, 
-    };
     enum sound_effect_t : uint8_t {
       single = 1, testplay,
     };
@@ -436,8 +432,13 @@ Button Index mapping
     };
 
     enum instachord_link_dev_t : uint8_t {
-      icld_kanplay,
+      icld_kanplay = 0,
       icld_instachord,
+    };
+
+    enum instachord_link_style_t : uint8_t {
+      icls_button = 0,
+      icls_pad,
     };
 
     // コマンドとパラメータのペア
@@ -797,6 +798,7 @@ Button Index mapping
       "♯"   , nullptr, "dim"  , { command::chord_semitone, 2,                               command::chord_modifier, KANTANMusic_Modifier_dim  },
       "♭"   , nullptr, "m7-5" , { command::chord_semitone, 1,                               command::chord_modifier, KANTANMusic_Modifier_m7_5 },
       "♯"   , nullptr, "m7-5" , { command::chord_semitone, 2,                               command::chord_modifier, KANTANMusic_Modifier_m7_5 },
+      "5/7" , nullptr, nullptr, { command::chord_bass_degree, 7, command::chord_degree, 5 },
       "5"    , nullptr, "/7"  , { command::chord_bass_degree, 7, command::chord_degree, 5 },
       "3"    , "〜"   , "/6♭"  , { command::chord_bass_semitone, 1, command::chord_bass_degree, 6, command::chord_minor_swap, 1, command::chord_degree, 3 },
       "C-" , nullptr, "Lock" , { command::lock_button, 1 },
@@ -918,6 +920,7 @@ Button Index mapping
 
     static constexpr const int autorelease_msec = 5000; // コード演奏モードでの 自動ノートオフまでの時間 5秒
     static constexpr const float arpeggio_reset_timeout_beats = 4.2f;
+    static constexpr const float auto_beat_reset_timeout_beats = 2.0f;
 
     static constexpr const int16_t step_per_beat_min = 1;  // 1ビートあたりのステップ数の最小値
     static constexpr const int16_t step_per_beat_default = 2; // 1ビートあたりのステップ数の初期値
@@ -931,9 +934,9 @@ Button Index mapping
     static constexpr const char* wifi_mdns = "kanplay";        // WiFi接続時のmDNS名 kanplay.local
 
     static constexpr const uint32_t app_version_major = 0;
-    static constexpr const uint32_t app_version_minor = 3;
-    static constexpr const uint32_t app_version_patch = 8;
-    static constexpr const char app_version_string[] = "038";
+    static constexpr const uint32_t app_version_minor = 4;
+    static constexpr const uint32_t app_version_patch = 5;
+    static constexpr const char app_version_string[] = "045";
     static constexpr const uint32_t app_version_raw = app_version_major<<16|app_version_minor<<8|app_version_patch;
 
     static constexpr const char url_manual[] = "https://kantan-play.com/core/manual/";
@@ -1058,6 +1061,7 @@ Button Index mapping
       { "4[7]"         , { "4 [ 7 ]"       , nullptr               }, { command::chord_modifier, KANTANMusic_Modifier_7    ,                               command::chord_degree, 4 } },
       { "4[M7]"        , { "4 [ M7 ]"      , nullptr               }, { command::chord_modifier, KANTANMusic_Modifier_M7   ,                               command::chord_degree, 4 } },
       { "5[7]"         , { "5 [ 7 ]"       , nullptr               }, { command::chord_modifier, KANTANMusic_Modifier_7    ,                               command::chord_degree, 5 } },
+      { "5 slash 7"    , { "5/7"           , nullptr               }, { command::chord_bass_degree, 7, command::chord_degree, 5 } },
       { "6[7]"         , { "6 [ 7 ]"       , nullptr               }, { command::chord_modifier, KANTANMusic_Modifier_7    ,                               command::chord_degree, 6 } },
       { "7[7]"         , { "7 [ 7 ]"       , nullptr               }, { command::chord_modifier, KANTANMusic_Modifier_7    ,                               command::chord_degree, 7 } },
       { "7 swap[7]"    , { "7〜[ 7 ]"      , nullptr               }, { command::chord_modifier, KANTANMusic_Modifier_7    , command::chord_minor_swap, 1, command::chord_degree, 7 } },
@@ -1138,6 +1142,7 @@ Button Index mapping
       { "dial 2 p"     , { "Dial 2 Push"   , "下ダイヤル押す"       },  {                               command::internal_button, 30 } },
       { "wheel l"      , { "Wheel Left"    , "ジョグダイヤル左回転" },  {                               command::internal_button, 31 } },
       { "wheel r"      , { "Wheel Right"   , "ジョグダイヤル右回転" },  {                               command::internal_button, 32 } },
+      { "beat"         , { "beat"          , "ビート"              }, {                                command::chord_beat     , 1 } },
       { "1"            , { "1"             , nullptr               }, {                               command::chord_degree   , 1 } },
       { "2 flat"       , { "2♭"           , nullptr               }, { command::chord_semitone, 1 ,  command::chord_degree   , 2 } },
       { "2"            , { "2"             , nullptr               }, {                               command::chord_degree   , 2 } },
@@ -1170,6 +1175,7 @@ Button Index mapping
       { "4[7]"         , { "4 [ 7 ]"       , nullptr               }, { command::chord_modifier, KANTANMusic_Modifier_7    ,                               command::chord_degree, 4 } },
       { "4[M7]"        , { "4 [ M7 ]"      , nullptr               }, { command::chord_modifier, KANTANMusic_Modifier_M7   ,                               command::chord_degree, 4 } },
       { "5[7]"         , { "5 [ 7 ]"       , nullptr               }, { command::chord_modifier, KANTANMusic_Modifier_7    ,                               command::chord_degree, 5 } },
+      { "5 slash 7"    , { "5/7"           , nullptr               }, { command::chord_bass_degree, 7, command::chord_degree, 5 } },
       { "6[7]"         , { "6 [ 7 ]"       , nullptr               }, { command::chord_modifier, KANTANMusic_Modifier_7    ,                               command::chord_degree, 6 } },
       { "7[7]"         , { "7 [ 7 ]"       , nullptr               }, { command::chord_modifier, KANTANMusic_Modifier_7    ,                               command::chord_degree, 7 } },
       { "7 swap[7]"    , { "7〜[ 7 ]"      , nullptr               }, { command::chord_modifier, KANTANMusic_Modifier_7    , command::chord_minor_swap, 1, command::chord_degree, 7 } },

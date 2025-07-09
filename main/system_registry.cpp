@@ -202,10 +202,6 @@ void system_registry_t::reset(void)
   // 演奏時ベロシティ設定
   operator_command.addQueue( { def::command::set_velocity, 127 } );
 
-  // ボタンマッピング設定
-  for (int i = 0; i < def::app::max_chord_part; ++i) {
-    chord_play.setPartNextEnable(i, true);
-  }
 
   command_mapping_external.reset();
   for (int i = 0; i < def::hw::max_button_mask; ++i) {
@@ -1080,7 +1076,7 @@ size_t system_registry_t::song_data_t::saveSongJSON(uint8_t* data_buffer, size_t
 
   json["format"] = "KANTANPlayCore";
   json["type"] = "Song";
-  json["version"] = 1;
+  json["version"] = 2;
   json["tempo"] = song_info.getTempo();
   json["swing"] = song_info.getSwing();
   json["base_key"] = system_registry.runtime_info.getMasterKey();
@@ -1129,6 +1125,7 @@ size_t system_registry_t::song_data_t::saveSongJSON(uint8_t* data_buffer, size_t
       part_info["loop_step"] = reg_part->part_info.getLoopStep();
       part_info["anchor_step"] = reg_part->part_info.getAnchorStep();
       part_info["stroke_speed"] = reg_part->part_info.getStrokeSpeed();
+      part_info["enabled"] = reg_part->part_info.getEnabled();
 
       if (reg_part->arpeggio == slot_default.chord_part[part_index].arpeggio) { continue; }
 
@@ -1272,8 +1269,9 @@ bool system_registry_t::song_data_t::loadSongJSON(const uint8_t* data, size_t da
       reg_part->part_info.setPosition(part_info["octave"].as<int>());
       reg_part->part_info.setVoicing(getVoicing(part_info["voicing"].as<const char*>()));
       reg_part->part_info.setLoopStep(part_info["loop_step"].as<int>());
-      reg_part->part_info.setAnchorStep(part_info["anchor_step"].as<int>());
-      reg_part->part_info.setStrokeSpeed(part_info["stroke_speed"].as<int>());
+      if (part_info["anchor_step" ].is<int>())  { reg_part->part_info.setAnchorStep( part_info["anchor_step" ].as<int>()); }
+      if (part_info["stroke_speed"].is<int>())  { reg_part->part_info.setStrokeSpeed(part_info["stroke_speed"].as<int>()); }
+      if (part_info["enabled"     ].is<bool>()) { reg_part->part_info.setEnabled(    part_info["enabled"     ].as<bool>()); }
       if (part_info["arpeggio"].is<JsonArray>()) {
         auto arpeggio = part_info["arpeggio"].as<JsonArray>();
         for (int pitch = 0; pitch < def::app::max_pitch_with_drum; ++pitch)

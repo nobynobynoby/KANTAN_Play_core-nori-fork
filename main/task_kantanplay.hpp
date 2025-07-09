@@ -151,12 +151,10 @@ Degree操作コマンド {
   int32_t getOnbeatCycleBySongTempo(void);
   uint32_t autoProc(void);
   uint32_t chordProc(void);
-  
-
-
 
   void chordStepReset(void);
   void chordNoteOff(int part);
+  void resetStepAndMute(void);
   void procSoundEffect(const def::command::command_param_t& command_param, const bool is_pressed);
   void procNoteButton(const def::command::command_param_t& command_param, const bool is_pressed);
   void procDrumButton(const def::command::command_param_t& command_param, const bool is_pressed);

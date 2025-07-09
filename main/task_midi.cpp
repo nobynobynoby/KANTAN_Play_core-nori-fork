@@ -28,6 +28,7 @@ private:
 // インスタコードリンク判定フラグ
   bool _flg_instachord_link = false;
   bool _flg_instachord_out = false;
+  bool _flg_instachord_pad = false;
 
 public:
   subtask_midi_t(midi_driver::MIDI_Transport* transport, system_registry_t::reg_task_status_t::bitindex_t task_status_index)
@@ -36,22 +37,25 @@ public:
   {
   }
 
-  void setInstaChordLink(bool enable, bool flg_output = false) {
+  void setInstaChordLink(bool enable, def::command::instachord_link_dev_t dev, def::command::instachord_link_style_t style) {
     _flg_instachord_link = enable;
-    _flg_instachord_out = flg_output;
+    // 演奏デバイスがInstaChordの場合はアウトプット有効とする
+    _flg_instachord_out = (dev == def::command::instachord_link_dev_t::icld_instachord);
+    _flg_instachord_pad = (style == def::command::instachord_link_style_t::icls_pad);
   }
 
   static void task_func(subtask_midi_t* me)
   {
+    auto midi = &(me->_midi);
     registry_t::history_code_t history_code_midi_out = 0;
+    uint32_t prev_on_beat_msec = 0;
     uint8_t prev_midi_volume = 0;
     bool prev_tx_enable = false;
     bool prev_rx_enable = false;
     uint8_t prev_slot_key = 255;
-    uint8_t channel_volume[def::midi::channel_max];
-    uint8_t program_number[def::midi::channel_max];
+    uint8_t channel_volume[def::midi::channel_max] = { 0, };
+    uint8_t program_number[def::midi::channel_max] = { 0, };
     memset(channel_volume, 100, sizeof(channel_volume));
-    auto midi = &(me->_midi);
 
     uint8_t tx_count = 0;
     uint8_t rx_count = 0;
@@ -118,6 +122,16 @@ public:
               command_param_array = system_registry.command_mapping_midinote.getCommandParamArray(message.data[0]);
               if (!command_param_array.empty() && velocity) {
                 system_registry.operator_command.addQueue( { def::command::set_velocity, velocity } );
+              }
+            } else {
+              if (me->_flg_instachord_pad && velocity) {
+                uint32_t msec = M5.millis();
+                uint32_t diff_msec = (msec - prev_on_beat_msec);
+                prev_on_beat_msec = msec;
+                // 100msec以内の連続したオンビートはキャンセルする(暫定実装)
+                if (diff_msec >= 100) {
+                  system_registry.operator_command.addQueue( { def::command::chord_beat, 0 }, true );
+                }
               }
             }
           }
@@ -355,24 +369,24 @@ void task_midi_t::task_func(task_midi_t* me)
   bool prev_usb_in = false;
 #endif
 
-  def::command::instachord_link_port_t prev_iclink_port = def::command::instachord_link_port_t::iclp_off;
-  def::command::instachord_link_dev_t prev_iclink_dev = def::command::instachord_link_dev_t::icld_kanplay;
+  auto prev_iclink_port = def::command::instachord_link_port_t::iclp_off;
+  auto prev_iclink_dev = def::command::instachord_link_dev_t::icld_kanplay;
+  auto prev_iclink_style = def::command::instachord_link_style_t::icls_button;
 
   for (;;) {
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
     auto iclink_port = system_registry.midi_port_setting.getInstaChordLinkPort();
     auto iclink_dev = system_registry.midi_port_setting.getInstaChordLinkDev();
-    if (prev_iclink_port != iclink_port || prev_iclink_dev != iclink_dev) {
-      // 演奏デバイスがInstaChordの場合はアウトプット有効とする
-      bool output = (iclink_dev == def::command::instachord_link_dev_t::icld_instachord);
+    auto iclink_style = system_registry.midi_port_setting.getInstaChordLinkStyle();
+    if (prev_iclink_port != iclink_port || prev_iclink_dev != iclink_dev || prev_iclink_style != iclink_style) {
       switch (prev_iclink_port) {
       case def::command::instachord_link_port_t::iclp_ble:
-        ble_midi_subtask.setInstaChordLink(false, output);
+        ble_midi_subtask.setInstaChordLink(false, iclink_dev, iclink_style);
         break;
 #ifdef MIDI_TRANSPORT_USB_HPP
       case def::command::instachord_link_port_t::iclp_usb:
-        usb_midi_subtask.setInstaChordLink(false, output);
+        usb_midi_subtask.setInstaChordLink(false, iclink_dev, iclink_style);
         break;
 #endif
         default:
@@ -381,16 +395,17 @@ void task_midi_t::task_func(task_midi_t* me)
       }
       prev_iclink_port = iclink_port;
       prev_iclink_dev = iclink_dev;
-      // InstaChord Linkモードのときは、チャンネルボリュームの最大値を 85 にする。
-      uint8_t chvol_max = 85;
+      prev_iclink_style = iclink_style;
+      // InstaChord Linkモードのときは、チャンネルボリュームの最大値を 75 にする。
+      uint8_t chvol_max = 75;
 
       switch (iclink_port) {
       case def::command::instachord_link_port_t::iclp_ble:
-        ble_midi_subtask.setInstaChordLink(true, output);
+        ble_midi_subtask.setInstaChordLink(true, iclink_dev, iclink_style);
         break;
 #ifdef MIDI_TRANSPORT_USB_HPP
       case def::command::instachord_link_port_t::iclp_usb:
-        usb_midi_subtask.setInstaChordLink(true, output);
+        usb_midi_subtask.setInstaChordLink(true, iclink_dev, iclink_style);
         break;
 #endif
       default:
