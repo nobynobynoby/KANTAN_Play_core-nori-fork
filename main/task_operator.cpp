@@ -780,14 +780,6 @@ void task_operator_t::commandProccessor(const def::command::command_param_t& com
     }
     break;
 
-  case def::command::panic_stop:
-    if (is_pressed) {
-      for (int i = 0; i < 16; ++i) { // CC#120はすべてのMIDI音を停止する
-        system_registry.midi_out_control.setControlChange(i, 120, 0);
-      }
-    }
-    break;
-
   case def::command::lock_button:
      // オンコードのコマンドで呼び出しなおす用
     def::command::command_param_t command_param(def::command::chord_bass_degree,system_registry.chord_play.getChordDegree());
