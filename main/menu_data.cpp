@@ -405,6 +405,40 @@ protected:
   }
 };
 
+struct mi_vol_uart_t : public mi_normal_t {
+  constexpr mi_vol_uart_t( def::menu_category_t cate, uint8_t seq, uint8_t level, const localize_text_t& title )
+  : mi_normal_t { cate, seq, level, title }
+  {}
+protected:
+  int getMinValue(void) const override { return 10; }
+  int getMaxValue(void) const override { return 127; }
+
+  int getValue(void) const override
+  {
+    return system_registry.user_setting.getUARTMasterVolume();
+  }
+  bool setValue(int value) const override
+  {
+    if (mi_normal_t::setValue(value) == false) { return false; }
+    system_registry.user_setting.setUARTMasterVolume(value);
+    return true;
+  }
+  const char* getSelectorText(size_t index) const override {
+    int tmp = index + getMinValue();
+    char buf[16];
+    snprintf(buf, sizeof(buf), "%d", tmp);
+    _title_text_buffer = buf;
+    return _title_text_buffer.c_str();
+  }
+  const char* getValueText(void) const override
+  {
+    char buf[16];
+    snprintf(buf, sizeof(buf), "%d", getValue());
+    _title_text_buffer = buf;
+    return _title_text_buffer.c_str();
+  }
+};
+
 struct mi_vol_adcmic_t : public mi_normal_t {
   constexpr mi_vol_adcmic_t( def::menu_category_t cate, uint8_t seq, uint8_t level, const localize_text_t& title )
   : mi_normal_t { cate, seq, level, title }
@@ -1692,6 +1726,38 @@ protected:
   }
 };
 
+// MIDI出力先の表示名テーブル
+static constexpr const localize_text_array_t midi_output_dest_name_table = { (size_t)def::midi::MidiOutputDest::midi_out_max, (const localize_text_t[]){
+  // def::midi::MidiOutputDest 列挙型の値に対応
+  { "KP + UART", "本体+UART" }, // midi_out_both (0)
+  { "KP Only"  , "本体のみ" },  // midi_out_internal
+  { "UART Only", "UARTのみ" },  // midi_out_uart
+  { "None"     , "なし" },      // midi_out_none
+}};
+
+struct mi_channel_dest_t : public mi_selector_t {
+protected:
+  const uint8_t _midi_channel; // Store the MIDI channel
+
+public:
+  constexpr mi_channel_dest_t( def::menu_category_t cate, uint8_t seq, uint8_t level, const localize_text_t& title, uint8_t midi_channel )
+  : mi_selector_t { cate, seq, level, title, &midi_output_dest_name_table } // Use the common table
+  , _midi_channel { midi_channel } {}
+
+  int getValue(void) const override
+  {
+    return getMinValue() + (int)system_registry.midi_output_setting.getOutputDestination(_midi_channel);
+  }
+
+  bool setValue(int value) const override
+  {
+    if (mi_selector_t::setValue(value) == false) { return false; }
+    value -= getMinValue();
+    system_registry.midi_output_setting.setOutputDestination(_midi_channel, (def::midi::MidiOutputDest)value);
+    return true;
+  }
+};
+
 static constexpr menu_item_ptr menu_system[] = {
   (const mi_tree_t          []){{ def::menu_category_t::menu_system,  0,0    , { "Menu"           , "メニュー"    }}},
   (const mi_tree_t          []){{ def::menu_category_t::menu_system,  1, 1   , { "File"           , "ファイル"    }}},
@@ -1911,9 +1977,28 @@ static constexpr menu_item_ptr menu_system[] = {
   (const mi_language_t      []){{ def::menu_category_t::menu_system,215,  2   , { "Language"       , "言語"        }}},
   (const mi_tree_t          []){{ def::menu_category_t::menu_system,216,  2   , { "Volume"         , "音量"        }}},
   (const mi_vol_midi_t      []){{ def::menu_category_t::menu_system,217,   3  , { "MIDI Mastervol" , "MIDIマスター音量"}}},
-  (const mi_vol_adcmic_t    []){{ def::menu_category_t::menu_system,218,   3  , { "ADC MicAmp"     , "ADCマイクアンプ" }}},
-  (const mi_all_reset_t     []){{ def::menu_category_t::menu_system,219,  2   , { "Reset All Settings", "全設定リセット"    }}},
-  (const mi_manual_qr_t     []){{ def::menu_category_t::menu_system,220, 1    , { "Manual QR"      , "説明書QR"     }}},
+  (const mi_vol_uart_t      []){{ def::menu_category_t::menu_system,218,   3  , { "UART Mastervol" , "UARTマスター音量"}}},
+  (const mi_vol_adcmic_t    []){{ def::menu_category_t::menu_system,219,   3  , { "ADC MicAmp"     , "ADCマイクアンプ" }}},
+  (const mi_all_reset_t     []){{ def::menu_category_t::menu_system,220,  2   , { "Reset All Settings", "全設定リセット"    }}},
+  (const mi_tree_t          []){{ def::menu_category_t::menu_system,221,  2   , { "Output Dest"    , "出力先"        }}},
+  (const mi_channel_dest_t  []){{ def::menu_category_t::menu_system,222,   3  , { "Channel 1" , "チャンネル1" }, 1 - 1}},
+  (const mi_channel_dest_t  []){{ def::menu_category_t::menu_system,223,   3  , { "Channel 2" , "チャンネル2" }, 2 - 1}},
+  (const mi_channel_dest_t  []){{ def::menu_category_t::menu_system,224,   3  , { "Channel 3" , "チャンネル3" }, 3 - 1}},
+  (const mi_channel_dest_t  []){{ def::menu_category_t::menu_system,225,   3  , { "Channel 4" , "チャンネル4" }, 4 - 1}},
+  (const mi_channel_dest_t  []){{ def::menu_category_t::menu_system,226,   3  , { "Channel 5" , "チャンネル5" }, 5 - 1}},
+  (const mi_channel_dest_t  []){{ def::menu_category_t::menu_system,227,   3  , { "Channel 6" , "チャンネル6" }, 6 - 1}},
+  (const mi_channel_dest_t  []){{ def::menu_category_t::menu_system,228,   3  , { "Channel 7" , "チャンネル7" }, 7 - 1}},
+  (const mi_channel_dest_t  []){{ def::menu_category_t::menu_system,229,   3  , { "Channel 8" , "チャンネル8" }, 8 - 1}},
+  (const mi_channel_dest_t  []){{ def::menu_category_t::menu_system,230,   3  , { "Channel 9" , "チャンネル9" }, 9 - 1}},
+  (const mi_channel_dest_t  []){{ def::menu_category_t::menu_system,231,   3  , { "Channel 10" , "チャンネル10" }, 10 - 1}},
+  (const mi_channel_dest_t  []){{ def::menu_category_t::menu_system,232,   3  , { "Channel 11" , "チャンネル11" }, 11 - 1}},
+  (const mi_channel_dest_t  []){{ def::menu_category_t::menu_system,233,   3  , { "Channel 12" , "チャンネル12" }, 12 - 1}},
+  (const mi_channel_dest_t  []){{ def::menu_category_t::menu_system,234,   3  , { "Channel 13" , "チャンネル13" }, 13 - 1}},
+  (const mi_channel_dest_t  []){{ def::menu_category_t::menu_system,235,   3  , { "Channel 14" , "チャンネル14" }, 14 - 1}},
+  (const mi_channel_dest_t  []){{ def::menu_category_t::menu_system,236,   3  , { "Channel 15" , "チャンネル15" }, 15 - 1}},
+  (const mi_channel_dest_t  []){{ def::menu_category_t::menu_system,237,   3  , { "Channel 16" , "チャンネル16" }, 16 - 1}},
+  (const mi_all_reset_t     []){{ def::menu_category_t::menu_system,238,  2   , { "Reset All Settings", "全設定リセット"    }}},
+  (const mi_manual_qr_t     []){{ def::menu_category_t::menu_system,239, 1    , { "Manual QR"      , "説明書QR"     }}},
   nullptr, // end of menu
 };
 // const size_t menu_system_size = sizeof(menu_system) / sizeof(menu_system[0]) - 1;

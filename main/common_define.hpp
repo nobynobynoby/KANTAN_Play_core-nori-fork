@@ -195,6 +195,14 @@ Button Index mapping
 
     static constexpr const size_t max_note = 128;
 
+    enum MidiOutputDest : uint8_t {
+      midi_out_both = 0, // Both KANTAN Play and UART MIDI
+      midi_out_internal, // KANTAN Play internal MIDI only
+      midi_out_uart,     // UART MIDI (PortC) only
+      midi_out_none,     // No MIDI output
+      midi_out_max,
+    };
+    
     static constexpr const simple_text_array_t program_name_table = { 129, (const simple_text_t[]){
     // static constexpr const char* program_name_table[129] = {
     "Piano1(Ac.)",  "Piano2(Brt.)",  "Piano3(E-Grd)",  "Honky tonk",

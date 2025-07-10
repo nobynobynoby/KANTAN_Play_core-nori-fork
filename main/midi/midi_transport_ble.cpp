@@ -47,9 +47,6 @@ static std::vector<uint8_t> _rx_data;
 static BLERemoteCharacteristic* remotecharacteristic = nullptr;
 static uint16_t _mtu_size = 23;
 
-// BLE再接続必須用デバイス
-static bool bleReConnect = false;
-
 // static constexpr const size_t _tx_queue_size = 4;
 // static int _tx_queue_index = 0;
 // static std::vector<uint8_t> _tx_queue[_tx_queue_size];
@@ -293,7 +290,7 @@ class MyClientCallback : public BLEClientCallbacks {
     kanplay_ns::system_registry.runtime_info.setMidiPortStateBLE(kanplay_ns::def::command::midiport_info_t::mp_enabled);
     ESP_LOGV("BLE", "ble client: onDisconnect\n");
     printf("ble client: onDisconnect\n");
-    if (remotecharacteristic != nullptr && !bleReConnect) {
+    if (remotecharacteristic != nullptr) {
       remotecharacteristic = nullptr;
     }
     if (pclient == _pClient) {
@@ -418,10 +415,6 @@ if (remotecharacteristic->canIndicate()        ) { printf("canIndicate\n"); }
 fflush(stdout);
 //*/
         if (remotecharacteristic != nullptr) {
-          // 再接続(再接続必要デバイスのため)
-          bleReConnect = true;
-          pClient->disconnect();
-          pClient->connect(&foundMidiDevices[0]);
           remotecharacteristic->registerForNotify(notifyCallback);
           kanplay_ns::system_registry.runtime_info.setMidiPortStateBLE(kanplay_ns::def::command::midiport_info_t::mp_connected);
         }
