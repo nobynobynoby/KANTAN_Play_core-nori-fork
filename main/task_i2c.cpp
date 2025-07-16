@@ -140,15 +140,26 @@ TODO:CoreS3でのSDカード挿抜状態判定を追加する
         }
 
         static def::command::midiport_info_t prev_usb_port_info;
+        static def::command::instachord_link_port_t prev_iclink_port = def::command::instachord_link_port_t::iclp_off; // 新たに状態を保持する変数
+
         auto usb_port_info = system_registry.runtime_info.getMidiPortStateUSB();
-        if (prev_usb_port_info != usb_port_info)
+        auto iclink_port = system_registry.midi_port_setting.getInstaChordLinkPort(); // InstaChord Linkの設定を取得
+
+        if (prev_usb_port_info != usb_port_info || prev_iclink_port != iclink_port)
         { // USBホスト使用時はUSBへの電源供給をオンにする
           prev_usb_port_info = usb_port_info;
-          if (usb_port_info == def::command::midiport_info_t::mp_off) {
-            M5.Power.setUsbOutput(false);
-          } else {
-            M5.Power.setUsbOutput(true);
+          prev_iclink_port = iclink_port; // 状態を更新
+
+          bool should_supply_usb_power = false;
+
+          // USB MIDIが有効または接続済みの場合
+          if (usb_port_info != def::command::midiport_info_t::mp_off) {
+              // かつ、InstaChord LinkがUSB経由ではない場合のみ電源を供給
+              if (iclink_port != def::command::instachord_link_port_t::iclp_usb) {
+                  should_supply_usb_power = true;
+              }
           }
+          M5.Power.setUsbOutput(should_supply_usb_power);
         }
       }
     }
