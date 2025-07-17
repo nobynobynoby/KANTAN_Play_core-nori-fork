@@ -14,6 +14,9 @@
 ## このForkの変更点・追加機能
 - 本家Ver 0.4.5取り込み
 
+- インスタコードリンク時のUSB給電停止
+　- USB-HOST有効時のUSB給電を、インスタコードリンク時のみ行わないように変更。
+
 - UART-MIDIカスタマイズ対応
   - [`M5Stack用MIDI音源ユニット`](https://www.switch-science.com/products/9928)想定
   - 各MIDIチャンネル(≒パート)ごとに内部MIDIとUART-MIDIへの出力の切り替えの設定を追加
