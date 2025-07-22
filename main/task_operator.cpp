@@ -335,11 +335,13 @@ void task_operator_t::commandProccessor(const def::command::command_param_t& com
 // M5_LOGV("command:%d value:%d", command, cmd_value);
   switch (command) {
   default: break;
+  case def::command::chord_beat:
+    system_registry.runtime_info.setChordAutoplayState(def::play::auto_play_mode_t::auto_play_beatmode);
+    [[fallthrough]]; // chord_beatは外部ビートでの演奏の開始と併せて以下の処理も実行する
   case def::command::set_velocity:
   case def::command::chord_degree:
   case def::command::note_button:
   case def::command::drum_button:
-  case def::command::chord_beat:
   case def::command::chord_step_reset_request:
   case def::command::autoplay_switch:
   case def::command::panic_stop:

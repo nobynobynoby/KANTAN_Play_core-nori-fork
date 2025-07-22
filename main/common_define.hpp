@@ -392,6 +392,7 @@ Button Index mapping
     enum class midiport_info_t : uint8_t {
       mp_off = 0,
       mp_enabled,
+      mp_connecting,
       mp_connected,
     };
 
@@ -786,6 +787,7 @@ Button Index mapping
       auto_play_none,
       auto_play_waiting,
       auto_play_running,
+      auto_play_beatmode,
       auto_play_max,
     };
 
@@ -900,8 +902,8 @@ Button Index mapping
 
     static constexpr const uint32_t app_version_major = 0;
     static constexpr const uint32_t app_version_minor = 4;
-    static constexpr const uint32_t app_version_patch = 5;
-    static constexpr const char app_version_string[] = "045";
+    static constexpr const uint32_t app_version_patch = 7;
+    static constexpr const char app_version_string[] = "047";
     static constexpr const uint32_t app_version_raw = app_version_major<<16|app_version_minor<<8|app_version_patch;
 
     static constexpr const char url_manual[] = "https://kantan-play.com/core/manual/";

@@ -104,37 +104,37 @@ bool task_kantanplay_t::commandProccessor(void)
   case def::command::autoplay_switch:
     if (is_pressed)
     { // 自動演奏モードのオン・オフのトグル
-      auto autoplay = system_registry.runtime_info.getChordAutoplayState();
+      auto autoplay_state = system_registry.runtime_info.getChordAutoplayState();
 
       // OTA実行中はオートプレイ禁止
       if (system_registry.runtime_info.getWiFiOtaProgress() != 0) {
-        autoplay = def::play::auto_play_mode_t::auto_play_none;
+        autoplay_state = def::play::auto_play_mode_t::auto_play_none;
       } else {
         switch (command_param.getParam()) {
           case def::command::autoplay_switch_t::autoplay_toggle:
-            if (autoplay == def::play::auto_play_mode_t::auto_play_none) {
-              autoplay = def::play::auto_play_mode_t::auto_play_waiting;
+            if (autoplay_state == def::play::auto_play_mode_t::auto_play_none) {
+              autoplay_state = def::play::auto_play_mode_t::auto_play_waiting;
             } else {
-              autoplay = def::play::auto_play_mode_t::auto_play_none;
+              autoplay_state = def::play::auto_play_mode_t::auto_play_none;
             }
             break;
   
           case def::command::autoplay_switch_t::autoplay_start:
-            if (autoplay != def::play::auto_play_mode_t::auto_play_running) {
-              autoplay = def::play::auto_play_mode_t::auto_play_waiting;
-              system_registry.runtime_info.setChordAutoplayState(autoplay);
+            if (autoplay_state != def::play::auto_play_mode_t::auto_play_running) {
+              autoplay_state = def::play::auto_play_mode_t::auto_play_waiting;
+              system_registry.runtime_info.setChordAutoplayState(autoplay_state);
               system_registry.player_command.addQueue( { def::command::chord_degree, 1 } );
             }
             break;
   
           case def::command::autoplay_switch_t::autoplay_stop:
-            autoplay = def::play::auto_play_mode_t::auto_play_none;
+            autoplay_state = def::play::auto_play_mode_t::auto_play_none;
             break;
         }
       }
       // M5_LOGV("autoplay %d", (int)autoplay);
-      system_registry.runtime_info.setChordAutoplayState(autoplay);
-      if (autoplay == def::play::auto_play_mode_t::auto_play_none) {
+      system_registry.runtime_info.setChordAutoplayState(autoplay_state);
+      if (autoplay_state == def::play::auto_play_mode_t::auto_play_none) {
         resetStepAndMute();
       }
     }
@@ -175,8 +175,8 @@ uint32_t task_kantanplay_t::autoProc(void)
     int remain_usec = _auto_play_onbeat_remain_usec - progress_usec;
     if (remain_usec < 0) {
       _auto_play_input_tolerating_remain_usec = def::app::input_tolerating_msec * 1000 + remain_usec;
-      auto auto_play = system_registry.runtime_info.getChordAutoplayState();
-      if (auto_play == def::play::auto_play_mode_t::auto_play_running)
+      auto autoplay_state = system_registry.runtime_info.getChordAutoplayState();
+      if (autoplay_state == def::play::auto_play_mode_t::auto_play_running)
       {
         auto onbeat_cycle_usec = getOnbeatCycleBySongTempo();
 
@@ -292,8 +292,8 @@ void task_kantanplay_t::procChordDegree(const def::command::command_param_t& com
     _next_option.bass_degree = system_registry.chord_play.getChordBassDegree();
   }
 
-  const auto auto_play = system_registry.runtime_info.getChordAutoplayState();
-  const bool is_auto = auto_play == def::play::auto_play_mode_t::auto_play_running;
+  const auto autoplay_state = system_registry.runtime_info.getChordAutoplayState();
+  const bool is_auto = autoplay_state == def::play::auto_play_mode_t::auto_play_running;
 
   int current_degree = system_registry.chord_play.getChordDegree();
   // 現在のDegreeと異なる場合
@@ -328,20 +328,11 @@ void task_kantanplay_t::procChordDegree(const def::command::command_param_t& com
 
   if (playflag)
   {
-    if (auto_play == def::play::auto_play_mode_t::auto_play_none) {
-      // インスタコードリンクのパッド演奏時は処理を分岐
-      auto iclink_port = system_registry.midi_port_setting.getInstaChordLinkPort();
-      auto iclink_style = system_registry.midi_port_setting.getInstaChordLinkStyle();
-      bool iclink_pad_mode
-       = ((iclink_port != def::command::instachord_link_port_t::iclp_off)
-       && (iclink_style == def::command::instachord_link_style_t::icls_pad)
-       );
-      if (!iclink_pad_mode) {
-        // 手動演奏の場合はここでステップ進行コマンドを発行する
-        // オモテ拍・ウラ拍の区別は is_pressedフラグで行う
-        system_registry.player_command.addQueue( { def::command::chord_beat, 0 }, is_pressed );
-      }
-    } else if (_auto_play_onbeat_remain_usec < 0) {
+    if (autoplay_state == def::play::auto_play_mode_t::auto_play_none) {
+      // 手動演奏の場合はここでステップ進行コマンドを発行する
+      // オモテ拍・ウラ拍の区別は is_pressedフラグで行う
+      system_registry.player_command.addQueue( { def::command::chord_beat, 0 }, is_pressed );
+    } else if (autoplay_state == def::play::auto_play_mode_t::auto_play_waiting) {
       // 自動演奏の開始待ち受け状態の場合はこのタイミングで自動演奏の開始
       _auto_play_onbeat_remain_usec = 0;
       system_registry.runtime_info.setChordAutoplayState(def::play::auto_play_mode_t::auto_play_running);
@@ -352,10 +343,25 @@ void task_kantanplay_t::procChordDegree(const def::command::command_param_t& com
 void task_kantanplay_t::procChordBeat(const def::command::command_param_t& command_param, const bool is_pressed)
 {
   // is_pressed==trueをオンビート、 falseをオフビート扱いとする
-  auto on_beat = is_pressed;
+  const auto on_beat = is_pressed;
 
 // この関数が呼ばれるのはユーザーによるDegreeボタン操作時や外部からのパルスがトリガー。
 // 自動演奏によるトリガーは含まれない。
+
+  bool offbeat_auto = (system_registry.user_setting.getOffbeatStyle() == def::play::offbeat_style_t::offbeat_auto);
+
+  if (!offbeat_auto) {
+    auto iclink_port = system_registry.midi_port_setting.getInstaChordLinkPort();
+    auto iclink_style = system_registry.midi_port_setting.getInstaChordLinkStyle();
+    // インスタコードリンクのパッド演奏時はウラ拍自動演奏として扱う
+    offbeat_auto = (iclink_port != def::command::instachord_link_port_t::iclp_off)
+                && (iclink_style == def::command::instachord_link_style_t::icls_pad);
+  }
+
+  // オフビートかつウラ拍自動の場合、オフビートコマンドに対する処理は行わず終了する
+  if (!on_beat && offbeat_auto) {
+    return;
+  }
 
   // 次回の自動演奏タイミングをキャンセルしておく
   _auto_play_onbeat_remain_usec = -1;
@@ -363,31 +369,18 @@ void task_kantanplay_t::procChordBeat(const def::command::command_param_t& comma
 
   chordBeat(on_beat);
 
-  const auto auto_play = system_registry.runtime_info.getChordAutoplayState();
-  const auto offbeat_style = system_registry.user_setting.getOffbeatStyle();
-
   if (on_beat) {
     // 自動演奏のサイクルを更新する
     setOnbeatCycle(_current_usec - _reactive_onbeat_usec);
     _reactive_onbeat_usec = _current_usec;
 
-    // インスタコードリンクのパッド演奏時
-    auto iclink_port = system_registry.midi_port_setting.getInstaChordLinkPort();
-    auto iclink_style = system_registry.midi_port_setting.getInstaChordLinkStyle();
-    bool iclink_pad_mode
-      = ((iclink_port != def::command::instachord_link_port_t::iclp_off)
-      && (iclink_style == def::command::instachord_link_style_t::icls_pad)
-      );
-
-    if ((auto_play != def::play::auto_play_mode_t::auto_play_none)
-     || (offbeat_style != def::play::offbeat_style_t::offbeat_self)
-     || iclink_pad_mode) {
+    // オフビートがオートの場合は、ここでオフビートのタイミングを更新する
+    if (offbeat_auto) {
       updateOffbeatTiming();
     }
   } else {
-    // ウラ拍の演奏が手動の場合
-    if ((auto_play == def::play::auto_play_mode_t::auto_play_none)
-     && (offbeat_style == def::play::offbeat_style_t::offbeat_self)) {
+    // オフビートがオートでない場合
+    if (!offbeat_auto) {
       // 手動だが step per beat が 3以上の場合は、後続のウラ拍を自動演奏にする
       const uint_fast8_t step_per_beat = system_registry.current_slot->slot_info.getStepPerBeat();
       if (step_per_beat >= 3) {

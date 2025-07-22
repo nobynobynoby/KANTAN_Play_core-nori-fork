@@ -32,12 +32,20 @@ public:
   void setUseTxRx(bool use_tx, bool use_rx) override;
 
   static void decodeReceive(const uint8_t* data, size_t length);
+  void setCentralConnected(bool connected);
+  void setPeripheralConnected(bool connected);
+
 private:
 
   std::vector<uint8_t> _tx_data;
   config_t _config;
   uint8_t _tx_runningStatus = 0;
   bool _is_begin = false;
+
+  bool _central_connected = false;
+  bool _peripheral_connected = false;
+  bool _connecting = false;
+  void updateState(void);
 };
 
 } // namespace midi_driver

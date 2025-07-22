@@ -77,6 +77,7 @@ namespace midi_driver {
     virtual void addMessage(const uint8_t* data, size_t length) = 0;
     virtual bool sendFlush(void) = 0;
 
+    bool isConnected(void) const { return _connected; }
     bool getUseTx(void) const { return _use_tx; }
     bool getUseRx(void) const { return _use_rx; }
     void setUseTx(bool enable) { setUseTxRx(enable, _use_rx); }
@@ -106,6 +107,7 @@ protected:
   protected:
     bool _use_tx = false;
     bool _use_rx = false;
+    bool _connected = false;
   };
 
   // MIDI Driver class
@@ -118,6 +120,7 @@ protected:
 
     void setSendBufferSize(size_t size) { _send_buffer_size = size; }
 
+    bool isConnected(void) const { return _transport->isConnected(); }
     bool getUseTx(void) const { return _transport->getUseTx(); }
     bool getUseRx(void) const { return _transport->getUseRx(); }
     void setUseTx(bool enable) { _transport->setUseTx(enable); }

@@ -144,6 +144,7 @@ void MIDI_Transport_UART::setUseTxRx(bool tx_enable, bool rx_enable)
     }
     if (err == ESP_OK) {
       _is_begin = true;
+      _connected = true;
     }
   }
   // M5_LOGD("uart_midi:uart_driver_install: %d", err);

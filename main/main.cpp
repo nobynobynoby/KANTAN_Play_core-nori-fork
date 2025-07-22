@@ -50,11 +50,50 @@ void setup() {
   M5.begin(cfg);
 
   M5.Display.setRotation(0);
+
+#if defined (CONFIG_IDF_TARGET_ESP32S3)
+  // CoreS3内蔵音源AW88298への電力供給を止める
+  M5.Power.Axp2101.setALDO1(0);
+  M5.Power.Axp2101.setBLDO2(0);
+
+  // CoreS3内蔵カメラへの電力供給を止める
+  M5.Power.Axp2101.setALDO3(0);
+  M5.Power.Axp2101.setBLDO1(0);
+#endif
+
   M5.Display.setTextSize(2);
   M5.Display.printf("KANTAN Play\nver%lu.%lu.%lu\n\nboot"
     , kanplay_ns::def::app::app_version_major, kanplay_ns::def::app::app_version_minor, kanplay_ns::def::app::app_version_patch);
 
+//*
+  {
+    static constexpr const uint8_t aw9523_i2c_addr = 0x58;
+    static constexpr const uint8_t port0_reg = 0x02;
+    static constexpr const uint8_t port1_reg = 0x03;
+    static constexpr const uint32_t port0_bitmask_bus_en = 0b00000010; // BUS EN
+    static constexpr const uint32_t port1_bitmask_boost = 0b10000000; // BOOST_EN
+
+    uint8_t buf[2];
+    M5.In_I2C.readRegister(aw9523_i2c_addr, port0_reg, buf, sizeof(buf), 100000);
+    uint8_t bus_en_on = buf[0] | port0_bitmask_bus_en;
+    uint8_t boost_on = buf[1] | port1_bitmask_boost;
+    uint8_t bus_en_off = bus_en_on & ~port0_bitmask_bus_en;
+
+    M5.In_I2C.writeRegister8(aw9523_i2c_addr, port0_reg, bus_en_off, 100000);
+    M5.In_I2C.writeRegister8(aw9523_i2c_addr, port1_reg, boost_on, 100000);
+
+    // BUS_ENをオンにした直後に短時間に電流が大量に流れるのを避けるため、
+    // 高速にオンオフを繰り返して、電流の立ち上がりを抑える。
+    // これをしないとバッテリ電圧が低い状況下では起動に失敗することがある。
+    for (int i = 0; i < 256; ++i) {
+      M5.In_I2C.writeRegister8(aw9523_i2c_addr, port0_reg, bus_en_off, 400000);
+      M5.In_I2C.writeRegister8(aw9523_i2c_addr, port0_reg, bus_en_on, 400000);
+      m5gfx::delayMicroseconds(i);
+    }
+  }
+/*/
   M5.Power.setExtOutput(true);
+//*/
   M5.Power.setChargeCurrent(200);
 
   log_memory(2); M5.delay(16); M5.Display.print("."); kanplay_ns::system_registry.init();
