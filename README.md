@@ -12,10 +12,12 @@
 ---
 
 ## このForkの変更点・追加機能
-- 本家Ver 0.4.5取り込み
+- 本家Ver 0.4.7取り込み
+
+- メニューの誤っていた箇所を修正(Reset All Settings/全設定リセットが2か所に表示されていた)
 
 - インスタコードリンク時のUSB給電停止
-　- USB-HOST有効時のUSB給電を、インスタコードリンク時のみ行わないように変更。
+  - USB-HOST有効時のUSB給電を、インスタコードリンク時のみ行わないように変更。
 
 - UART-MIDIカスタマイズ対応
   - [`M5Stack用MIDI音源ユニット`](https://www.switch-science.com/products/9928)想定

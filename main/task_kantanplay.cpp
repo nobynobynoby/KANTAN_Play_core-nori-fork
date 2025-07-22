@@ -292,8 +292,6 @@ void task_kantanplay_t::procChordDegree(const def::command::command_param_t& com
   const uint8_t lock_status = system_registry.chord_play.getLockButtonState();
   const uint8_t lock_degree = system_registry.chord_play.getLockedChordDegree();
 
-  int current_degree = system_registry.chord_play.getChordDegree();
-
   // コードロック状態でコードが決定している場合はコードのすり替え※ロックボタンは先押し
   if (lock_status == def::play::lock::lock_type_t::chord){
     if(lock_degree != 0) {
