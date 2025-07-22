@@ -68,6 +68,7 @@ protected:
             IMU_VELOCITY_LEVEL,
             CHATTERING_THRESHOLD,
             TIMEZONE,
+            UART_MASTER_VOLUME,
         };
 
         // ディスプレイの明るさ
@@ -97,6 +98,10 @@ protected:
         // 現在のMIDIマスターボリューム (0-127)
         void setMIDIMasterVolume(uint8_t volume) { set8(MIDI_MASTER_VOLUME, volume); }
         uint8_t getMIDIMasterVolume(void) const { return get8(MIDI_MASTER_VOLUME); }
+
+        // 現在のUARTマスターボリューム (0-127)
+        void setUARTMasterVolume(uint8_t volume) { set8(UART_MASTER_VOLUME, volume); }
+        uint8_t getUARTMasterVolume(void) const { return get8(UART_MASTER_VOLUME); }
 
         // 現在のADCマイクアンプレベル (SAMからES8388への入力時)
         void setADCMicAmp(uint8_t level) { set8(ADC_MIC_AMP, level); }
@@ -149,6 +154,14 @@ protected:
         void setInstaChordLinkStyle(def::command::instachord_link_style_t style) { set8(INSTACHORD_LINK_STYLE, static_cast<uint8_t>(style)); }
         def::command::instachord_link_style_t getInstaChordLinkStyle(void) const { return static_cast<def::command::instachord_link_style_t>(get8(INSTACHORD_LINK_STYLE)); }
     } midi_port_setting;
+
+     // チャンネルごとのMIDI出力設定
+    struct reg_midi_output_setting_t : public registry_t {
+        reg_midi_output_setting_t(void) : registry_t(16, 0, DATA_SIZE_8) {};
+        void setOutputDestination(uint8_t midi_channel, def::midi::MidiOutputDest value){ set8(midi_channel, (uint8_t)value); }
+        def::midi::MidiOutputDest getOutputDestination(uint8_t midi_channel) const { return (def::midi::MidiOutputDest)get8(midi_channel); }
+
+    } midi_output_setting;
 
     // 実行時に変化する情報 (設定画面が存在しない可変情報)
     struct reg_runtime_info_t : public registry_t {

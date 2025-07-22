@@ -83,6 +83,8 @@ void system_registry_t::init(void)
   user_setting.init();
   midi_port_setting.init();
 
+  midi_output_setting.init();
+
   runtime_info.init();
   popup_notify.init();
   popup_qr.init();
@@ -167,6 +169,9 @@ void system_registry_t::reset(void)
   // MIDIマスターボリューム設定
   user_setting.setMIDIMasterVolume(127);
 
+  // UARTマスターボリューム設定
+  user_setting.setUARTMasterVolume(127);
+  
   // ADCマイクアンプ設定
   user_setting.setADCMicAmp(0);
 
@@ -511,6 +516,7 @@ size_t system_registry_t::saveSettingJSON(uint8_t* data, size_t data_length)
     json["imu_velocity_level"]   = user_setting.getImuVelocityLevel();
     json["chattering_threshold"] = user_setting.getChatteringThreshold();
     json["timezone"]             = user_setting.getTimeZone();
+    json["uart_master_volume"]   = user_setting.getUARTMasterVolume();
   }
   {
     auto json = json_root["midi_port_setting"].to<JsonObject>();
@@ -599,6 +605,7 @@ bool system_registry_t::loadSettingJSON(const uint8_t* data, size_t data_length)
     user_setting.setImuVelocityLevel(                        json["imu_velocity_level"  ].as<uint8_t>());
     user_setting.setChatteringThreshold(                     json["chattering_threshold"].as<uint8_t>());
     user_setting.setTimeZone(                                json["timezone"            ].as<int8_t>());
+    user_setting.setUARTMasterVolume(                        json["uart_master_volume"  ].as<uint8_t>());
   }
   {
     auto json = json_root["midi_port_setting"].as<JsonObject>();

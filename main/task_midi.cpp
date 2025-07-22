@@ -50,6 +50,7 @@ public:
     registry_t::history_code_t history_code_midi_out = 0;
     uint32_t prev_on_beat_msec = 0;
     uint8_t prev_midi_volume = 0;
+    uint8_t prev_uart_volume = 0;
     bool prev_tx_enable = false;
     bool prev_rx_enable = false;
     uint8_t prev_slot_key = 255;
@@ -155,6 +156,7 @@ public:
         prev_tx_enable = tx_enable;
         if (tx_enable) {
           prev_midi_volume = 0;
+          prev_uart_volume = 0;
           for (int i = 0; i < 16; ++i) {
             // チャンネルボリュームおよびプログラムチェンジを設定
             uint8_t vol = channel_volume[i];
@@ -181,14 +183,26 @@ public:
         }
         if (!me->_flg_instachord_link || me->_flg_instachord_out)
         {
-          auto midi_volume = system_registry.user_setting.getMIDIMasterVolume();
-          if (prev_midi_volume != midi_volume) {
-            prev_midi_volume = midi_volume;
-            // マスターボリューム設定
-            midi->sendControlChange(def::midi::channel_1, 99, 55);
-            midi->sendControlChange(def::midi::channel_1, 98,  7);
-            midi->sendControlChange(def::midi::channel_1,  6, midi_volume);
-            queued = true;
+          if(me->_task_status_index == system_registry_t::reg_task_status_t::bitindex_t::TASK_MIDI_EXTERNAL){
+            auto uart_volume = system_registry.user_setting.getUARTMasterVolume();
+            if (prev_uart_volume != uart_volume) {
+              prev_uart_volume = uart_volume;
+              // UARTマスターボリューム設定
+              midi->sendControlChange(def::midi::channel_1, 99, 55);
+              midi->sendControlChange(def::midi::channel_1, 98,  7);
+              midi->sendControlChange(def::midi::channel_1,  6, uart_volume);
+              queued = true;
+            }
+          }else{
+            auto midi_volume = system_registry.user_setting.getMIDIMasterVolume();
+            if (prev_midi_volume != midi_volume) {
+              prev_midi_volume = midi_volume;
+              // MIDIマスターボリューム設定
+              midi->sendControlChange(def::midi::channel_1, 99, 55);
+              midi->sendControlChange(def::midi::channel_1, 98,  7);
+              midi->sendControlChange(def::midi::channel_1,  6, midi_volume);
+              queued = true;
+            }
           }
         }
       }
@@ -217,8 +231,32 @@ public:
         }
         if (send) {
           if (tx_enable && (!me->_flg_instachord_link || me->_flg_instachord_out)) {
-            midi->sendMessage(status, data1, data2);
-            queued = true;
+            bool should_send_to_current_output = false;
+            def::midi::MidiOutputDest output_dest = system_registry.midi_output_setting.getOutputDestination(midi_ch);
+
+            switch (me->_task_status_index) {
+              case system_registry_t::reg_task_status_t::bitindex_t::TASK_MIDI_INTERNAL:
+                if (output_dest == def::midi::MidiOutputDest::midi_out_both ||
+                    output_dest == def::midi::MidiOutputDest::midi_out_internal) {
+                  should_send_to_current_output = true;
+                }
+                break;
+              case system_registry_t::reg_task_status_t::bitindex_t::TASK_MIDI_EXTERNAL:
+                if (output_dest == def::midi::MidiOutputDest::midi_out_both ||
+                    output_dest == def::midi::MidiOutputDest::midi_out_uart) {
+                  should_send_to_current_output = true;
+                }
+                break;
+              default:
+                // For other MIDI outputs (BLE, USB), the existing logic applies
+                should_send_to_current_output = true;
+                break;
+            }
+
+            if (should_send_to_current_output) {
+              midi->sendMessage(status, data1, data2);
+              queued = true;
+            }
           }
         }
       }
