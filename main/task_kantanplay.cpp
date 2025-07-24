@@ -346,6 +346,14 @@ void task_kantanplay_t::procChordDegree(const def::command::command_param_t& com
   if (is_pressed) { // Degreeボタンを押したタイミングで次のオモテ拍での演奏オプションをセットしておく
     _next_option.degree = degree;
     _next_option.bass_degree = bassDegree;
+    
+    // degreeボタン単独押し時はsemitone=0（ノーマル）に自動クリア
+    bool semitone_button_pressed = system_registry.working_command.check({ def::command::chord_semitone, 1 }) ||
+                                   system_registry.working_command.check({ def::command::chord_semitone, 2 });
+    if (!semitone_button_pressed) {
+      system_registry.chord_play.setChordSemitone(0);
+    }
+    
     // _next_option.semitone_shift = system_registry.chord_play.getChordSemitone();
     // _next_option.bass_semitone_shift = system_registry.chord_play.getChordBassSemitone();
     // _next_option.minor_swap = system_registry.chord_play.getChordMinorSwap();
