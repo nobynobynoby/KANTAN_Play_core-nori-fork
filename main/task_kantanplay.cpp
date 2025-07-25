@@ -67,7 +67,7 @@ bool task_kantanplay_t::commandProccessor(void)
   bool is_pressed;
   if (false == system_registry.player_command.getQueue(&_player_command_history_code, &command_param, &is_pressed))
   { return false; }
-// printf("commandProccessor: %d, %d, isPressed %d\n", command_param.getCommand(), command_param.getParam(), is_pressed);
+ //printf("commandProccessor: %d, %d, isPressed %d\n", command_param.getCommand(), command_param.getParam(), is_pressed);
   switch (command_param.getCommand()) {
   default:
     break;
@@ -130,12 +130,49 @@ bool task_kantanplay_t::commandProccessor(void)
           case def::command::autoplay_switch_t::autoplay_stop:
             autoplay_state = def::play::auto_play_mode_t::auto_play_none;
             break;
+
+          case def::command::autoplay_switch_t::autoplay_pause:
+            //printf("autoplay_pause command received, is_pressed: %d\n", is_pressed);
+            if (autoplay_state == def::play::auto_play_mode_t::auto_play_running) {
+              // 押下時: 自動演奏のタイミングを停止 (ステータスは変更しない)
+              _auto_play_onbeat_remain_usec = -1;
+              _auto_play_offbeat_remain_usec = -1;
+              _auto_play_input_tolerating_remain_usec = -1;
+              _arpeggio_reset_remain_usec = -1;
+            }
+            break;
         }
       }
       // M5_LOGV("autoplay %d", (int)autoplay);
       system_registry.runtime_info.setChordAutoplayState(autoplay_state);
       if (autoplay_state == def::play::auto_play_mode_t::auto_play_none) {
         resetStepAndMute();
+      }
+    } else {
+      // リリース時の処理
+      auto autoplay_state = system_registry.runtime_info.getChordAutoplayState();
+      if (command_param.getParam() == def::command::autoplay_switch_t::autoplay_pause) {
+        //printf("autoplay_pause command received, is_pressed: %d\n", is_pressed);
+        if (autoplay_state == def::play::auto_play_mode_t::auto_play_running) {
+          // リリース時: オールノートOFFしてauto_play_pausedに移行
+          allPartsNoteOff();
+          system_registry.runtime_info.setChordAutoplayState(def::play::auto_play_mode_t::auto_play_paused);
+        }
+      }
+    }
+    break;
+
+  case def::command::auto_play_pause:
+    {
+      //printf("auto_play_pause command received, is_pressed: %d\n", is_pressed);
+      auto autoplay_state = system_registry.runtime_info.getChordAutoplayState();
+      
+      if (autoplay_state != def::play::auto_play_mode_t::auto_play_running) {
+        system_registry.player_command.addQueue( { def::command::panic_stop, 1 }, is_pressed);
+        system_registry.player_command.addQueue( { def::command::autoplay_switch, def::command::autoplay_switch_t::autoplay_stop }, is_pressed );
+      } else {
+        // auto_play_running中の場合は、autoplay_pause処理を実行
+        system_registry.player_command.addQueue( { def::command::autoplay_switch, def::command::autoplay_switch_t::autoplay_pause }, is_pressed );
       }
     }
     break;
@@ -365,8 +402,9 @@ void task_kantanplay_t::procChordDegree(const def::command::command_param_t& com
       // 手動演奏の場合はここでステップ進行コマンドを発行する
       // オモテ拍・ウラ拍の区別は is_pressedフラグで行う
       system_registry.player_command.addQueue( { def::command::chord_beat, 0 }, is_pressed );
-    } else if (autoplay_state == def::play::auto_play_mode_t::auto_play_waiting) {
-      // 自動演奏の開始待ち受け状態の場合はこのタイミングで自動演奏の開始
+    } else if (autoplay_state == def::play::auto_play_mode_t::auto_play_waiting 
+            || autoplay_state == def::play::auto_play_mode_t::auto_play_paused) {
+      // 自動演奏の開始待ち受け状態、または一時停止状態の場合はこのタイミングで自動演奏の開始
       _auto_play_onbeat_remain_usec = 0;
       system_registry.runtime_info.setChordAutoplayState(def::play::auto_play_mode_t::auto_play_running);
     }
@@ -1003,6 +1041,14 @@ void task_kantanplay_t::resetStepAndMute(void)
     system_registry.midi_out_control.setControlChange(i, 120, 0);
   }
   _arpeggio_reset_remain_usec = 1024;
+}
+
+void task_kantanplay_t::allPartsNoteOff(void)
+{
+  // 各パートの音を停止する
+  for (int part_index = 0; part_index < def::app::max_chord_part; ++part_index) {
+    chordNoteOff(part_index);
+  }
 }
 
 

@@ -345,6 +345,7 @@ void task_operator_t::commandProccessor(const def::command::command_param_t& com
   case def::command::drum_button:
   case def::command::chord_step_reset_request:
   case def::command::autoplay_switch:
+  case def::command::auto_play_pause:
   case def::command::panic_stop:
     system_registry.player_command.addQueue(command_param, is_pressed);
     break;
