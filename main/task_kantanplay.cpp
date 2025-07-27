@@ -286,35 +286,47 @@ uint32_t task_kantanplay_t::chordProc(void)
 void task_kantanplay_t::procChordDegree(const def::command::command_param_t& command_param, const bool is_pressed)
 {
   uint8_t degree = command_param.getParam();
+  int semitone = system_registry.chord_play.getChordSemitone();
   uint8_t bassDegree = system_registry.chord_play.getChordBassDegree();
+  int bassSemitone = system_registry.chord_play.getChordBassSemitone();
 
   // ロック状態とロック時コードを取得
   const uint8_t lock_status = system_registry.chord_play.getLockButtonState();
   const uint8_t lock_degree = system_registry.chord_play.getLockedChordDegree();
+  const int lock_semitone = system_registry.chord_play.getLockedSemitone();
 
   // コードロック状態でコードが決定している場合はコードのすり替え※ロックボタンは先押し
   if (lock_status == def::play::lock::lock_type_t::chord){
     if(lock_degree != 0) {
       // コードロック状態でコードが決定している場合は、ベースコードはボタンのコードに変更
       bassDegree = degree;
+      bassSemitone = semitone;
       // コードロック状態でコードが決定している場合は、ロックされたコードに変更する
       degree = lock_degree;
+      semitone = lock_semitone;
+      // セミトーンはリアルタイム反映なので、ここでレジストリに登録
+      system_registry.chord_play.setChordSemitone(semitone);
     } else {
-      // ロック状態でコードが決定していない場合は、現在のコードをそのまま使用し、ロックコードを決定する
+      // ロック状態でコードが決定していない場合は、現在のコードをそのまま使用し、ロックコードを決定する()
       system_registry.chord_play.setLockedChordDegree(degree);
+      system_registry.chord_play.setLockedSemitone(semitone);
     }
   }else if (lock_status == def::play::lock::lock_type_t::bass) {
     if(lock_degree != 0) {
-      // ロック状態でコードが決定している場合は、ロックされたコードに変更する
+      // ベースロック状態でコードが決定している場合は、ベースをロックされたコードに変更する
       bassDegree = lock_degree;
+      bassSemitone = lock_semitone;
     } else {
-      // ロック状態でコードが決定していない場合は、現在のコードをそのまま使用し、ロックコードを決定する
+      // ベースロック状態でコードが決定していない場合は、現在のコードをそのまま使用し、ロックコードを決定する
       system_registry.chord_play.setLockedChordDegree(degree);
+      system_registry.chord_play.setLockedSemitone(semitone);
     }
  }else{
     // ロック状態でない場合は、ロックコードをクリア
     system_registry.chord_play.setLockedChordDegree(0);
-  } 
+    system_registry.chord_play.setLockedSemitone(0);
+  }
+
 
   const auto autoplay_state = system_registry.runtime_info.getChordAutoplayState();
   const bool is_auto = autoplay_state == def::play::auto_play_mode_t::auto_play_running;
@@ -346,14 +358,38 @@ void task_kantanplay_t::procChordDegree(const def::command::command_param_t& com
   if (is_pressed) { // Degreeボタンを押したタイミングで次のオモテ拍での演奏オプションをセットしておく
     _next_option.degree = degree;
     _next_option.bass_degree = bassDegree;
-    
-    // degreeボタン単独押し時はsemitone=0（ノーマル）に自動クリア
+
     bool semitone_button_pressed = system_registry.working_command.check({ def::command::chord_semitone, 1 }) ||
                                    system_registry.working_command.check({ def::command::chord_semitone, 2 });
-    if (!semitone_button_pressed) {
-      system_registry.chord_play.setChordSemitone(0);
+    bool bass_semitone_button_pressed = system_registry.working_command.check({ def::command::chord_bass_semitone, 1 }) ||
+                                        system_registry.working_command.check({ def::command::chord_bass_semitone, 2 });
+
+
+    if(lock_status == def::play::lock::lock_type_t::chord) {
+      if(!semitone_button_pressed && !bass_semitone_button_pressed) {
+              // コードロック状態でセミトーンボタン・ベースセミトーンボタン両方が押されていない場合は、ベースセミトーンクリア
+        system_registry.chord_play.setChordBassSemitone(0);
+        bassSemitone = 0; // 次ステップのベースセミトーンをクリアする(リアルタイム反映じゃないので)
+      }
+    } else if (lock_status == def::play::lock::lock_type_t::bass) {
+           if(!semitone_button_pressed && !bass_semitone_button_pressed) {
+              // ベースロック状態でセミトーンボタン・ベースセミトーンボタン両方が押されていない場合は、セミトーンクリア
+        system_registry.chord_play.setChordSemitone(0);
+      }
+    }else{
+       // ロック状態じゃない場合は双方ボタンに合わせて解除
+      if(!semitone_button_pressed) {
+        system_registry.chord_play.setChordSemitone(0);
+      }
+      if(!bass_semitone_button_pressed) {
+        system_registry.chord_play.setChordBassSemitone(0);
+        bassSemitone = 0; // 次ステップのベースセミトーンをクリアする(リアルタイム反映じゃないので)
+      }
     }
     
+    // BassSemitoneはリアルタイム反映させないので、ここで設定し、その値を演奏時に使用する。
+    _next_option.bass_semitone_shift = bassSemitone;
+
     // _next_option.semitone_shift = system_registry.chord_play.getChordSemitone();
     // _next_option.bass_semitone_shift = system_registry.chord_play.getChordBassSemitone();
     // _next_option.minor_swap = system_registry.chord_play.getChordMinorSwap();
@@ -578,18 +614,27 @@ void task_kantanplay_t::chordStepAdvance(bool disable_note_off)
         normal_reset = true;
       }
     }
+ //   auto semitone_shift = system_registry.chord_play.getChordSemitone();
+ //   auto bass_semitone_shift = system_registry.chord_play.getChordBassSemitone();
+ //   auto minor_swap = system_registry.chord_play.getChordMinorSwap();
+ //   if (_semitone_shift != semitone_shift
+ //    || _bass_semitone_shift != bass_semitone_shift
+ //    || _minor_swap != minor_swap) {
+ //     _semitone_shift = semitone_shift;
+ //     _bass_semitone_shift = bass_semitone_shift;
+ //     _minor_swap = minor_swap;
+ //     normal_reset = true;
+ //   }
+
+    // オンベースのセミトーンシフトはこの対象から外す(仕様変更)。
     auto semitone_shift = system_registry.chord_play.getChordSemitone();
-    auto bass_semitone_shift = system_registry.chord_play.getChordBassSemitone();
     auto minor_swap = system_registry.chord_play.getChordMinorSwap();
     if (_semitone_shift != semitone_shift
-     || _bass_semitone_shift != bass_semitone_shift
      || _minor_swap != minor_swap) {
       _semitone_shift = semitone_shift;
-      _bass_semitone_shift = bass_semitone_shift;
       _minor_swap = minor_swap;
       normal_reset = true;
     }
-
 
     // ステップのリセット要求があれば先頭に戻す
     if (_step_reset_request) {
@@ -718,7 +763,7 @@ void task_kantanplay_t::chordStepPlay(void)
   options.semitone_shift = _semitone_shift;
   options.modifier = system_registry.chord_play.getChordModifier();
   options.bass_degree =  _current_option.bass_degree;
-  options.bass_semitone_shift =  _bass_semitone_shift;
+  options.bass_semitone_shift =  _current_option.bass_semitone_shift;
 
 // M5_LOGE("key: %d, minor_swap: %d, modifier: %d, semitone: %d", key, minor_swap, (int)modifier, semitone);
   for (int part = 0; part < def::app::max_chord_part; ++part) {

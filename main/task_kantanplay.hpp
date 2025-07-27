@@ -76,7 +76,7 @@ Degree操作コマンド {
     uint8_t degree;
     uint8_t bass_degree;
     // int8_t semitone_shift;
-    // int8_t bass_semitone_shift;
+    int8_t bass_semitone_shift; // ベース音の半音シフト(仕様変更により、ベース音の半音シフトのリアルタイム変更をやめる)
     // bool minor_swap;
     // 比較演算子オペレータ
 
@@ -85,7 +85,7 @@ Degree操作コマンド {
       return rhs.degree == degree
           && rhs.bass_degree == bass_degree
           // && rhs.semitone_shift == semitone_shift
-          // && rhs.bass_semitone_shift == bass_semitone_shift
+          && rhs.bass_semitone_shift == bass_semitone_shift
           // && rhs.minor_swap == minor_swap;
           ;
     }

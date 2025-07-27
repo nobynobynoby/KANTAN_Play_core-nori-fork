@@ -783,8 +783,6 @@ void task_operator_t::commandProccessor(const def::command::command_param_t& com
     break;
 
   case def::command::lock_button:
-     // オンコードのコマンドで呼び出しなおす用
-    def::command::command_param_t command_param(def::command::chord_bass_degree,system_registry.chord_play.getChordDegree());
 
     if (is_pressed) {
       // ロックボタン操作
@@ -801,8 +799,7 @@ void task_operator_t::commandProccessor(const def::command::command_param_t& com
       system_registry.chord_play.setLockedChordDegree(0);
       system_registry.chord_play.setLockedSemitone(0);      
     }
-    // オンコードのコマンドで呼び出しなおし
-    commandProccessor(command_param, is_pressed);
+
     break;
 
   }
@@ -1071,6 +1068,13 @@ void task_operator_t::procChordBaseDegree(const def::command::command_param_t& c
 
 void task_operator_t::procChordBaseSemitone(const def::command::command_param_t& command_param, const bool is_pressed)
 {
+  const auto autoplay_state = system_registry.runtime_info.getChordAutoplayState();
+  const bool is_auto = autoplay_state == def::play::auto_play_mode_t::auto_play_running;
+
+  // 自動演奏時のみ、semitoneボタン離脱時は何もしない（ワーキングコマンドのクリアもsemitoneの再計算・反映も行わない）
+  if (is_auto && !is_pressed) {
+    return;
+  }
   // M5_LOGV("chord_bass_semitone %d %d", command_param.getParam(), is_pressed);
   int value = 0;
   if (system_registry.working_command.check( { def::command::chord_bass_semitone, 1 } )) { --value; }
