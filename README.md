@@ -1,62 +1,71 @@
-# KANTAN Play Core（かんぷれ）アプリケーション  
-# KANTAN Play Core Application
+# KANTAN_Play_core（のり私家Fork版）
+
+> ※このリポジトリは [`InstaChord/KANTAN_Play_core`](https://github.com/InstaChord/KANTAN_Play_core) の私家Fork（のり版）です。
 
 ---
 
-## 概要 / Overview
+## 元READMEについて
 
-KANTAN Play Core（通称：かんぷれ）は、M5Stack Core2 以降の機種で動作するオープンソース音楽ガジェットです。  
-このプログラムは、専用ハードウェア「KANTAN Play base」と組み合わせてご利用ください。  
-KANTAN Play baseは、スイッチ類、MIDI音源、アンプ回路、バッテリー、各種インターフェイスを内蔵した専用デバイスです。  
-KANTAN Play baseが接続されていない場合は、プログラムは起動しません。
-
-KANTAN Play Core is an open-source music gadget for M5Stack Core2 or later devices.  
-This program is designed to be used together with the dedicated hardware "KANTAN Play base."  
-KANTAN Play base is a special hardware device that includes switches, a MIDI sound source, amplifier circuit, battery, and various interfaces.  
-The program will not start if KANTAN Play base is not connected.
+元リポジトリのREADME内容は [`README_original.md`](./README_original.md) にそのまま収録しています。  
+詳細な仕様や説明はこちらをご覧ください。
 
 ---
 
-## 特徴 / Features
+## このForkの変更点・追加機能
+- 本家Ver 0.4.7取り込み
 
-- 指一本で簡単にコード演奏が可能  
-  Play chords easily with just one finger  
-- オープンソースによる自由なカスタマイズ  
-  Freely customizable thanks to open-source design  
-- ソフトウェアと専用ハードウェアの組み合わせに最適化  
-  Optimized for use with dedicated hardware  
+- 自動演奏時の♯♭対応
+  - ♯♭がついたボタンを押下後、離すと自動演奏時そのタイミングで♯♭が外れた演奏になる動作を抑制(次の単音押下まで♯♭があるものとして扱う)
+  - オンコード時の♯♭の挙動変更(オンコードの発音は押下後コードボタンを押されたタイミングなので、オンコード時の♯♭もそれに倣う)
+  - 通常の♯♭はオンコード側には適用されないように変更。
+
+- ロック機能の修正
+  - 軽微なBufFix
+  - ベース音側の♯♭に対応
+
+- 自動演奏の一時停止機能を追加
+  - エンコーダー１(右上つまみ)のクリックで、自動演奏一時停止(押下で演奏停止、リリースで発音停止)、一時停止中に再度押下で、完全停止。演奏再開は通常のコードボタンで才再開。
+
+- メニューの誤っていた箇所を修正(Reset All Settings/全設定リセットが2か所に表示されていた)
+
+- インスタコードリンク時のUSB給電停止
+  - USB-HOST有効時のUSB給電を、インスタコードリンク時のみ行わないように変更。
+
+- UART-MIDIカスタマイズ対応
+  - [`M5Stack用MIDI音源ユニット`](https://www.switch-science.com/products/9928)想定
+  - 各MIDIチャンネル(≒パート)ごとに内部MIDIとUART-MIDIへの出力の切り替えの設定を追加
+  - UART-MIDIのマスターボリューム設定を、内部MIDIと分けて設定できるよう変更
+  - ※パートの設定は現状内部レジストリに保存していませんその都度用設定。UARTボリュームは保存していますが、初期値は0です。
+
+- ノートモードの音色変更
+  - スロット設定メニューの末尾にノートモードの音色を選択する機能を追加
+  - ノートモードの音色をユーザーソングスデータに保持/読み込みする機能を追加
+  - ノートモードのスケールをユーザーソングスデータに保持/読み込みする機能を追加  
+
+- PbHUB接続機能の追加
+  - [`Unit Pbhub v1.1`](https://docs.m5stack.com/en/unit/pbhub_1.1)を使用できるように修正。アドレス0x61～0x64、使用ポートは0～3限定(4,5は使用不可)
+  - 各Grove端子に[`Unit Dual Button`](https://docs.m5stack.com/en/unit/dual_button)の接続を想定
+
+- 組み合わせの追加機能
+  - 5/7,3~/6b追加(追加サンプル)
+  - 4機能組み合わせ時の境界チェック漏れ修正
+
+- ロック機能の追加
+  - ベースロック(B-Lock)機能追加。ロックボタン押下後、他のコードボタンでシーケンスを進めてもベースはオンコードとして残りづける。
+  - コードロック(C-Lock)機能追加。ロックボタン押下後、他のコードボタンでシーケンスを進めてもベースのみがコードに追従し、ベース音以外はロック時のコードのままシーケンスが進む。
+  - 双方ロック時には他のコードボタンが押されてもアルペジエータは先頭に戻らない(同じコードボタンが押されている扱い)
+  - ※現状ベース音側の調号(♯♭)は未対応
+
+- BLE-MIDIの修正・追加についてはすべて破棄(本家ver 0.4.5で問題解決しているので)
 
 ---
 
-## インストール方法 / Installation
+## ブランチ運用について
 
-1. このリポジトリをクローンします。  
-   Clone this repository.
-2. 必要な依存関係をインストールします。  
-   Install required dependencies.
-3. ビルドしてM5Stack Core2（以降）に書き込みます。  
-   Build and flash to your M5Stack Core2 (or later).
+- fork元のcloneは `main` ブランチ  
+- 私家版の全機能統合版は `develop` ブランチ  
+- 各機能ごとに独立したブランチで開発中です
 
 ---
 
-## ライセンス / License
-
-- このリポジトリ全体はMITライセンスの下で公開されています。詳細は [LICENSE](./LICENSE) をご覧ください。  
-  The main repository is licensed under the MIT License. See [LICENSE](./LICENSE) for details.
-
-- `main/kantan-music/` フォルダ内の KANTAN Music API は、別のライセンス条件が適用されます。詳細は [main/kantan-music/LICENSE_KANTAN_MUSIC.md](./main/kantan-music/LICENSE_KANTAN_MUSIC.md) をご覧ください。  
-  The `main/kantan-music/` folder contains the KANTAN Music API, which is subject to a separate license. See [main/kantan-music/LICENSE_KANTAN_MUSIC.md](./main/kantan-music/LICENSE_KANTAN_MUSIC.md) for details.
-
----
-
-## お問い合わせ / Contact
-
-- 技術的なご質問は、[GitHub Issues](https://github.com/InstaChord/KANTAN_Play_core/issues) からご連絡ください。
-- その他のお問い合わせは、[公式WEBサイトのコンタクトフォーム](https://instachord.com/contact/) よりご連絡ください。
-
-For technical questions, please use [GitHub Issues](https://github.com/InstaChord/KANTAN_Play_core/issues).
-For other inquiries, please contact us via our [official website contact form](https://en.instachord.com/#contact).
-
-
----
-
+ご質問・要望があればお気軽にお問い合わせください。
