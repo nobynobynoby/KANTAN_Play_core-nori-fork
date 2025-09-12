@@ -3493,6 +3493,8 @@ void gui_t::procTouchControl(const m5::touch_detail_t& td)
           if ((part_change_mask & (1 << i))) {
             part_change_mask &= ~(1 << i);
             partinfo->setEnabled(!next_enabled);
+            // パート状態変更通知コマンドを発行
+            system_registry.player_command.addQueue({def::command::part_changed, 0});
           }
         }
       }

@@ -167,6 +167,7 @@ Degree操作コマンド {
   void procDrumButton(const def::command::command_param_t& command_param, const bool is_pressed);
   void procChordStepResetRequest(const def::command::command_param_t& command_param, const bool is_pressed);
   void procPlayEffect(const def::command::command_param_t& command_param, const bool is_pressed);
+  void procPartChanged(const def::command::command_param_t& command_param, const bool is_pressed);
 
   void setPitchManage(uint8_t part, uint8_t pitch, uint8_t midi_ch, uint8_t note_number, int8_t velocity, int32_t press_usec, int32_t release_usec);
 
