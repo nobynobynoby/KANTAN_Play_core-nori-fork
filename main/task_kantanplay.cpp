@@ -371,28 +371,82 @@ uint32_t task_kantanplay_t::chordProc(void)
 // Degree(度数)ボタン操作時の処理
 void task_kantanplay_t::procChordDegree(const def::command::command_param_t& command_param, const bool is_pressed)
 {
-  const uint8_t degree = command_param.getParam();
+  uint8_t degree = command_param.getParam();
+  int semitone = system_registry.chord_play.getChordSemitone();
+  uint8_t bassDegree = system_registry.chord_play.getChordBassDegree();
   int bassSemitone = system_registry.chord_play.getChordBassSemitone();
+
+  // ロック状態とロック時コードを取得
+  const uint8_t lock_status = system_registry.chord_play.getLockButtonState();
+  const uint8_t lock_degree = system_registry.chord_play.getLockedChordDegree();
+  const int lock_semitone = system_registry.chord_play.getLockedSemitone();
+
+  // コードロック状態でコードが決定している場合はコードのすり替え※ロックボタンは先押し
+  if (lock_status == def::play::lock::lock_type_t::chord){
+    if(lock_degree != 0) {
+      // コードロック状態でコードが決定している場合は、ベースコードはボタンのコードに変更
+      bassDegree = degree;
+      bassSemitone = semitone;
+      // コードロック状態でコードが決定している場合は、ロックされたコードに変更する
+      degree = lock_degree;
+      semitone = lock_semitone;
+      // セミトーンはリアルタイム反映なので、ここでレジストリに登録
+      system_registry.chord_play.setChordSemitone(semitone);
+    } else {
+      // ロック状態でコードが決定していない場合は、現在のコードをそのまま使用し、ロックコードを決定する()
+      system_registry.chord_play.setLockedChordDegree(degree);
+      system_registry.chord_play.setLockedSemitone(semitone);
+    }
+  }else if (lock_status == def::play::lock::lock_type_t::bass) {
+    if(lock_degree != 0) {
+      // ベースロック状態でコードが決定している場合は、ベースをロックされたコードに変更する
+      bassDegree = lock_degree;
+      bassSemitone = lock_semitone;
+    } else {
+      // ベースロック状態でコードが決定していない場合は、現在のコードをそのまま使用し、ロックコードを決定する
+      system_registry.chord_play.setLockedChordDegree(degree);
+      system_registry.chord_play.setLockedSemitone(semitone);
+    }
+ }else{
+    // ロック状態でない場合は、ロックコードをクリア
+    system_registry.chord_play.setLockedChordDegree(0);
+    system_registry.chord_play.setLockedSemitone(0);
+  }
 
   if (is_pressed) { // Degreeボタンを押したタイミングで次のオモテ拍での演奏オプションをセットしておく
     _next_option.degree = degree;
-    _next_option.bass_degree = system_registry.chord_play.getChordBassDegree();
-    // degreeボタンが単独で押された(セミトーンボタンがworking_commandにいない)場合はsemitone=0（ノーマル）に自動クリア
+    _next_option.bass_degree = bassDegree;
+
     bool semitone_button_pressed = system_registry.working_command.check({ def::command::chord_semitone, 1 }) ||
                                    system_registry.working_command.check({ def::command::chord_semitone, 2 });
     bool bass_semitone_button_pressed = system_registry.working_command.check({ def::command::chord_bass_semitone, 1 }) ||
                                         system_registry.working_command.check({ def::command::chord_bass_semitone, 2 });
-    
-    if (!semitone_button_pressed) {
-      system_registry.chord_play.setChordSemitone(0);
-    }
-    if(!bass_semitone_button_pressed) {
-      system_registry.chord_play.setChordBassSemitone(0);
-      bassSemitone = 0; // 次ステップのベースセミトーンをクリアする(リアルタイム反映じゃないので)
-    }
+
+
+    if(lock_status == def::play::lock::lock_type_t::chord) {
+      if(!semitone_button_pressed && !bass_semitone_button_pressed) {
+              // コードロック状態でセミトーンボタン・ベースセミトーンボタン両方が押されていない場合は、ベースセミトーンクリア
+        system_registry.chord_play.setChordBassSemitone(0);
+        bassSemitone = 0; // 次ステップのベースセミトーンをクリアする(リアルタイム反映じゃないので)
+      }
+    } else if (lock_status == def::play::lock::lock_type_t::bass) {
+           if(!semitone_button_pressed && !bass_semitone_button_pressed) {
+              // ベースロック状態でセミトーンボタン・ベースセミトーンボタン両方が押されていない場合は、セミトーンクリア
+        system_registry.chord_play.setChordSemitone(0);
+      }
+    }else{
+       // ロック状態じゃない場合は双方ボタンに合わせて解除
+      if(!semitone_button_pressed) {
+        system_registry.chord_play.setChordSemitone(0);
+      }
+      if(!bass_semitone_button_pressed) {
+        system_registry.chord_play.setChordBassSemitone(0);
+        bassSemitone = 0; // 次ステップのベースセミトーンをクリアする(リアルタイム反映じゃないので)
+      }
+    }   
     // BassSemitoneはリアルタイム反映させないので、ここで設定し、その値を演奏時に使用する。
     _next_option.bass_semitone_shift = bassSemitone;
-   }
+  }
 
   const auto autoplay_state = system_registry.runtime_info.getChordAutoplayState();
   const bool is_auto = autoplay_state == def::play::auto_play_mode_t::auto_play_running;
@@ -634,7 +688,10 @@ void task_kantanplay_t::chordStepAdvance(bool disable_note_off)
     // _current_option と _next_option が違う場合は先頭に戻す (アンカーステップは効く)
     if (_current_option != _next_option) {
       _current_option = _next_option;
-      normal_reset = true;
+      // ロックボタンが押されていない場合のみ先頭に戻す
+      if(system_registry.chord_play.getLockButtonState() == def::play::lock::lock_type_t::none) {
+        normal_reset = true;
+      }
     }
     auto semitone_shift = system_registry.chord_play.getChordSemitone();
     auto bass_semitone_shift = system_registry.chord_play.getChordBassSemitone();
