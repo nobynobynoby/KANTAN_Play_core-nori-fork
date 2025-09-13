@@ -372,6 +372,7 @@ uint32_t task_kantanplay_t::chordProc(void)
 void task_kantanplay_t::procChordDegree(const def::command::command_param_t& command_param, const bool is_pressed)
 {
   const uint8_t degree = command_param.getParam();
+  int bassSemitone = system_registry.chord_play.getChordBassSemitone();
 
   if (is_pressed) { // Degreeボタンを押したタイミングで次のオモテ拍での演奏オプションをセットしておく
     _next_option.degree = degree;
@@ -379,9 +380,18 @@ void task_kantanplay_t::procChordDegree(const def::command::command_param_t& com
     // degreeボタンが単独で押された(セミトーンボタンがworking_commandにいない)場合はsemitone=0（ノーマル）に自動クリア
     bool semitone_button_pressed = system_registry.working_command.check({ def::command::chord_semitone, 1 }) ||
                                    system_registry.working_command.check({ def::command::chord_semitone, 2 });
+    bool bass_semitone_button_pressed = system_registry.working_command.check({ def::command::chord_bass_semitone, 1 }) ||
+                                        system_registry.working_command.check({ def::command::chord_bass_semitone, 2 });
+    
     if (!semitone_button_pressed) {
       system_registry.chord_play.setChordSemitone(0);
     }
+    if(!bass_semitone_button_pressed) {
+      system_registry.chord_play.setChordBassSemitone(0);
+      bassSemitone = 0; // 次ステップのベースセミトーンをクリアする(リアルタイム反映じゃないので)
+    }
+    // BassSemitoneはリアルタイム反映させないので、ここで設定し、その値を演奏時に使用する。
+    _next_option.bass_semitone_shift = bassSemitone;
    }
 
   const auto autoplay_state = system_registry.runtime_info.getChordAutoplayState();
@@ -766,7 +776,7 @@ void task_kantanplay_t::chordStepPlay(void)
   options.semitone_shift = _semitone_shift;
   options.modifier = system_registry.chord_play.getChordModifier();
   options.bass_degree =  _current_option.bass_degree;
-  options.bass_semitone_shift =  _bass_semitone_shift;
+  options.bass_semitone_shift =  _current_option.bass_semitone_shift;
 
 // M5_LOGE("key: %d, minor_swap: %d, modifier: %d, semitone: %d", key, minor_swap, (int)modifier, semitone);
   for (int part = 0; part < def::app::max_chord_part; ++part) {

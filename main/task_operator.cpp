@@ -1109,6 +1109,13 @@ void task_operator_t::procChordBassDegree(const def::command::command_param_t& c
 
 void task_operator_t::procChordBassSemitone(const def::command::command_param_t& command_param, const bool is_pressed)
 {
+  const auto autoplay_state = system_registry.runtime_info.getChordAutoplayState();
+  const bool is_auto = autoplay_state == def::play::auto_play_mode_t::auto_play_running;
+
+  // 自動演奏時のみ、semitoneボタン離脱時は何もしない（ワーキングコマンドのクリアもsemitoneの再計算・反映も行わない）
+  if (is_auto && !is_pressed) {
+    return;
+  }
   // M5_LOGV("chord_bass_semitone %d %d", command_param.getParam(), is_pressed);
   int value = 0;
   if (system_registry.working_command.check( { def::command::chord_bass_semitone, 1 } )) { --value; }
