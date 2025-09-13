@@ -102,6 +102,10 @@ bool task_kantanplay_t::commandProccessor(void)
     procPlayEffect(command_param, is_pressed);
     break;
 
+  case def::command::part_changed:
+    procPartChanged(command_param, is_pressed);
+    break;
+
   case def::command::autoplay_switch:
     { // 自動演奏モードのオン・オフのトグル
       auto autoplay_state = system_registry.runtime_info.getChordAutoplayState();
@@ -1011,6 +1015,21 @@ void task_kantanplay_t::procSoundEffect(const def::command::command_param_t& com
   }
 }
 
+void task_kantanplay_t::procPartChanged(const def::command::command_param_t& command_param, const bool is_pressed)
+{
+  // 6パートのオンオフ状態を取得し、ビットマップを作成
+  uint8_t value = 0;
+  for (int part_index = 0; part_index < 6; ++part_index) {
+    bool enabled = system_registry.current_slot->chord_part[part_index].part_info.getEnabled();
+    if (enabled) {
+      value |= (1 << part_index);  // ビットpart_indexをセット（パート1=ビット0, パート2=ビット1, ..., パート6=ビット5）
+    }
+  }
+
+  // CC#16をチャンネル1で送信
+  system_registry.midi_out_control.setControlChange(0, 16, value);
+}
+
 void task_kantanplay_t::procChordStepResetRequest(const def::command::command_param_t& command_param, const bool is_pressed)
 {
   if (!is_pressed) { return; }
@@ -1087,10 +1106,6 @@ void task_kantanplay_t::allPartsNoteOff(void)
     system_registry.midi_out_control.setControlChange(i, 120, 0);
   }
 }
-
-
-
-
 
 // 指定したノートナンバーの音が他のピッチでも鳴っている数を調べる関数
 int32_t task_kantanplay_t::checkOtherPitchNote(int part, int pitch, int midi_ch, int note_number)

@@ -327,6 +327,7 @@ Button Index mapping
       menu_open,
       internal_button,        // メインボタンへのマッピング (WebSocket等で利用)
       play_control,
+      part_changed,           // パート状態変更通知用コマンド
       command_max,
     };
 

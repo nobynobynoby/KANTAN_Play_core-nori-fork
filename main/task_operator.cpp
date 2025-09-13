@@ -557,6 +557,10 @@ void task_operator_t::commandProccessor(const def::command::command_param_t& com
       // パートオンまたは編集の場合は当該パートを有効化する
       bool en = def::command::part_off != command;
       system_registry.current_slot->chord_part[part_index].part_info.setEnabled(en);
+      
+      // パート状態変更通知コマンドを投入
+      system_registry.player_command.addQueue({def::command::part_changed, 0});
+      
       if (def::command::part_edit == command)
       { // 編集に入る前にバックアップする
         system_registry.backup_song_data.assign(system_registry.song_data);
@@ -1117,6 +1121,9 @@ void task_operator_t::setSlotIndex(uint8_t slot_index)
   }
   system_registry.runtime_info.setPlaySlot(slot_index);
   system_registry.working_command.set( { def::command::slot_select, 1 + slot_index } );
+
+  // パート状態変更通知コマンドを投入
+  system_registry.player_command.addQueue({def::command::part_changed, 0});
 
   system_registry.runtime_info.setPlayMode(system_registry.current_slot->slot_info.getPlayMode());
 }
